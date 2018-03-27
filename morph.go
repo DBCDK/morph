@@ -33,27 +33,12 @@ func init() {
 
 func main() {
 	// setup assets
-
-	tempDir, err := ioutil.TempDir("", "morph-")
+	assetRoot, err := assets.Setup()
 	if err != nil {panic(err)}
-	defer os.RemoveAll(tempDir)
+	defer assets.Teardown(assetRoot)
 
-	evalMachinesData, err := assets.Asset("data/eval-machines.nix")
-	if err != nil {
-		if err != nil {panic(err)}
-	}
-
-	optionsData, err := assets.Asset("data/options.nix")
-	if err != nil {
-		if err != nil {panic(err)}
-	}
-
-	evalMachinesPath := filepath.Join(tempDir, "eval-machines.nix")
-	optionsPath := filepath.Join(tempDir, "options.nix")
-	ioutil.WriteFile(evalMachinesPath, evalMachinesData, 0644)
-	ioutil.WriteFile(optionsPath, optionsData, 0644)
-
-	fmt.Println(tempDir)
+	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
+	fmt.Println(assetRoot)
 
 	// assets done
 
