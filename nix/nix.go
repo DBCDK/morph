@@ -77,6 +77,38 @@ func BuildMachines(evalMachines string, deploymentFile *os.File, hosts []Host) (
 	return resultPath, nil
 }
 
-func Push() {
+func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
+	path1, err := os.Readlink(filepath.Join(resultPath, host.Name))
+	if err != nil {
+		return paths, err
+	}
 
+	path2, err := os.Readlink(filepath.Join(resultPath, host.Name + ".drv"))
+	if err != nil {
+		return paths, err
+	}
+
+	paths = append(paths, path1, path2)
+
+	return paths, nil
+}
+
+func Push(host Host, paths ...string) (err error) {
+	for _, path := range paths {
+		cmd := exec.Command(
+			"nix", "copy",
+			path,
+			"--to", "ssh://" + host.TargetHost,
+		)
+
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

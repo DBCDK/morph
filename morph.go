@@ -46,4 +46,15 @@ func main() {
 	}
 
 	fmt.Println(resultPath)
+
+	for _, host := range filteredHosts {
+		paths, err := nix.GetPathsToPush(host, resultPath)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(paths)
+		for _, path := range paths {
+			nix.Push(host, path)
+		}
+	}
 }
