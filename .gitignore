@@ -1,0 +1,7 @@
+
+# IntelliJ IDEA project files
+*.iml
+.idea
+
+# Default binary output file name
+/morph
