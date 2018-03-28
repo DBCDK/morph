@@ -16,14 +16,14 @@ import (
 
 var (
 	app                    = kingpin.New("morph", "NixOS host manager").Version("1.0")
+	dryRun                 = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
+	selectGlob             = app.Flag("on", "Glob for selecting servers in the deployment").Default("*").String()
+	selectEvery            = app.Flag("every", "Select every n hosts").Default("1").Int()
+	selectSkip             = app.Flag("skip", "Skip first n hosts").Default("0").Int()
+	selectLimit            = app.Flag("limit", "Select at most n hosts").Int()
 	deploy                 = app.Command("deploy", "Deploy machines")
 	deployment             = deploy.Arg("deployment", "File containing the deployment exec expression").Required().File()
 	switchAction           = deploy.Arg("switch-action", "Either of dry-activate|test|switch|boot").Required().Enum("dry-activate", "test", "switch", "boot")
-	deployOn               = deploy.Flag("on", "Glob for selecting servers in the deployment").Default("*").String()
-	deployEvery            = deploy.Flag("every", "Select every n hosts").Default("1").Int()
-	deploySkip             = deploy.Flag("skip", "Skip first n hosts").Default("0").Int()
-	deployLimit            = deploy.Flag("limit", "Select at most n hosts").Int()
-	deployDryRun           = deploy.Flag("dry-run", "Don't deploy anything, just eval and print changes").Default("False").Bool()
 	deployAskForSudoPasswd = deploy.Flag("passwd", "Whether to ask interactively for remote sudo password").Default("False").Bool()
 
 	tempDir, tempDirErr = ioutil.TempDir("", "morph-")
@@ -52,12 +52,12 @@ func main() {
 		panic(err)
 	}
 
-	matchingHosts, err := filter.MatchHosts(hosts, *deployOn)
+	matchingHosts, err := filter.MatchHosts(hosts, *selectGlob)
 	if err != nil {
 		panic(err)
 	}
 
-	filteredHosts := filter.FilterHosts(matchingHosts, *deploySkip, *deployEvery, *deployLimit)
+	filteredHosts := filter.FilterHosts(matchingHosts, *selectSkip, *selectEvery, *selectLimit)
 
 	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(hosts), len(hosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, hostname := range nix.GetHostnames(filteredHosts) {
@@ -73,7 +73,7 @@ func main() {
 	fmt.Println("nix result path: " + resultPath)
 	fmt.Println()
 
-	if *deployDryRun {
+	if *dryRun {
 		fmt.Println("Keeping it dry, aborting before connecting to any hosts ...")
 		return
 	}
