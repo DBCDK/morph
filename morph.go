@@ -23,7 +23,7 @@ var (
 	selectLimit            = app.Flag("limit", "Select at most n hosts").Int()
 	deploy                 = app.Command("deploy", "Deploy machines")
 	deployment             = deploy.Arg("deployment", "File containing the deployment exec expression").Required().File()
-	switchAction           = deploy.Arg("switch-action", "Either of dry-activate|test|switch|boot").Required().Enum("dry-activate", "test", "switch", "boot")
+	switchAction           = deploy.Arg("switch-action", "Either of build|push|dry-activate|test|switch|boot").Required().Enum("build", "push", "dry-activate", "test", "switch", "boot")
 	deployAskForSudoPasswd = deploy.Flag("passwd", "Whether to ask interactively for remote sudo password").Default("False").Bool()
 
 	tempDir, tempDirErr = ioutil.TempDir("", "morph-")
@@ -73,6 +73,10 @@ func main() {
 	fmt.Println("nix result path: " + resultPath)
 	fmt.Println()
 
+	if *switchAction == "build" {
+		return
+	}
+
 	if *dryRun {
 		fmt.Println("Keeping it dry, aborting before connecting to any hosts ...")
 		return
@@ -88,6 +92,10 @@ func main() {
 			fmt.Printf("\t* %s\n", path)
 		}
 		nix.Push(host, paths...)
+	}
+
+	if *switchAction == "push" {
+		return
 	}
 
 	fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
