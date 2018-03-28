@@ -70,17 +70,22 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println(resultPath)
-
-	for _, host := range filteredHosts {
-		paths, err := nix.GetPathsToPush(host, resultPath)
-		if err != nil {
-			panic(err)
-		}
-		fmt.Println(paths)
-	}
+	fmt.Println("nix result path: " + resultPath)
+	fmt.Println()
 
 	if !*deployDryRun {
+		for _, host := range filteredHosts {
+			paths, err := nix.GetPathsToPush(host, resultPath)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Printf("Pushing paths to %v:\n", host.TargetHost)
+			for _, path := range paths {
+				fmt.Printf("\t* %s\n", path)
+			}
+			nix.Push(host, paths...)
+		}
+
 
 		fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
 		sudoPasswd := ""
