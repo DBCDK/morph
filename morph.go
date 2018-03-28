@@ -3,25 +3,30 @@ package main
 import (
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/assets"
-	filter "git-platform.dbc.dk/platform/morph/filter"
-	nix "git-platform.dbc.dk/platform/morph/nix"
+	"git-platform.dbc.dk/platform/morph/filter"
+	"git-platform.dbc.dk/platform/morph/nix"
+	"git-platform.dbc.dk/platform/morph/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 )
 
 var (
-	app          = kingpin.New("morph", "NixOS host manager").Version("1.0")
-	deploy       = app.Command("deploy", "Deploy machines")
-	deployment   = deploy.Arg("deployment", "File containing the deployment nix expression").Required().File()
-	deployOn     = deploy.Flag("on", "Glob for selecting servers in the deployment").Default("*").String()
-	deployEvery  = deploy.Flag("every", "Select every n hosts").Default("1").Int()
-	deploySkip   = deploy.Flag("skip", "Skip first n hosts").Default("0").Int()
-	deployLimit  = deploy.Flag("limit", "Select at most n hosts").Int()
-	deployDryRun = deploy.Flag("dry-run", "Don't perform any actions").Default("False").Bool()
+	app                    = kingpin.New("morph", "NixOS host manager").Version("1.0")
+	deploy                 = app.Command("deploy", "Deploy machines")
+	deployment             = deploy.Arg("deployment", "File containing the deployment exec expression").Required().File()
+	switchAction           = deploy.Arg("switch-action", "Either of dry-activate|test|switch|boot").Required().Enum("dry-activate", "test", "switch", "boot")
+	deployOn               = deploy.Flag("on", "Glob for selecting servers in the deployment").Default("*").String()
+	deployEvery            = deploy.Flag("every", "Select every n hosts").Default("1").Int()
+	deploySkip             = deploy.Flag("skip", "Skip first n hosts").Default("0").Int()
+	deployLimit            = deploy.Flag("limit", "Select at most n hosts").Int()
+	deployDryRun           = deploy.Flag("dry-run", "Don't deploy anything, just eval and print changes").Default("False").Bool()
+	deployAskForSudoPasswd = deploy.Flag("passwd", "Whether to ask interactively for remote sudo password").Default("False").Bool()
 
-	tempDir, tempDirErr		 = ioutil.TempDir("", "morph-")
+	tempDir, tempDirErr = ioutil.TempDir("", "morph-")
 )
 
 func init() {
@@ -34,14 +39,15 @@ func init() {
 func main() {
 	// setup assets
 	assetRoot, err := assets.Setup()
-	if err != nil {panic(err)}
+	if err != nil {
+		panic(err)
+	}
 	defer assets.Teardown(assetRoot)
 
 	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
 	fmt.Println(assetRoot)
 
 	// assets done
-
 
 	fmt.Println((*deployment).Name())
 	hosts, err := nix.GetMachines(evalMachinesPath, *deployment)
@@ -72,8 +78,40 @@ func main() {
 			panic(err)
 		}
 		fmt.Println(paths)
-		for _, path := range paths {
-			nix.Push(host, path)
-		}
 	}
+
+	if !*deployDryRun {
+
+		fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
+		sudoPasswd := ""
+		if *deployAskForSudoPasswd && *switchAction != "dry-activate" {
+			fmt.Print("Please enter remote sudo password: ")
+			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+			if err != nil {
+				panic(err)
+			}
+			sudoPasswd = string(bytePassword)
+			fmt.Println()
+		}
+
+		fmt.Println()
+		for _, host := range filteredHosts {
+
+			fmt.Println("** " + host.TargetHost)
+
+			configuration, err := nix.GetNixSystemPath(host, resultPath)
+			if err != nil {
+				panic(err)
+			}
+
+			err = ssh.ActivateConfiguration(host, configuration, *switchAction, sudoPasswd)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+	} else {
+		fmt.Println("Keeping it dry, aborting before connecting to any hosts ...")
+	}
+
 }

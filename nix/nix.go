@@ -77,13 +77,21 @@ func BuildMachines(evalMachines string, deploymentFile *os.File, hosts []Host) (
 	return resultPath, nil
 }
 
+func GetNixSystemPath(host Host, resultPath string) (string, error) {
+	return os.Readlink(filepath.Join(resultPath, host.Name))
+}
+
+func GetNixSystemDerivation(host Host, resultPath string) (string, error) {
+	return os.Readlink(filepath.Join(resultPath, host.Name + ".drv"))
+}
+
 func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
-	path1, err := os.Readlink(filepath.Join(resultPath, host.Name))
+	path1, err := GetNixSystemPath(host, resultPath)
 	if err != nil {
 		return paths, err
 	}
 
-	path2, err := os.Readlink(filepath.Join(resultPath, host.Name + ".drv"))
+	path2, err := GetNixSystemDerivation(host, resultPath)
 	if err != nil {
 		return paths, err
 	}
