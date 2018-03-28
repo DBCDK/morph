@@ -1,10 +1,10 @@
 package ssh
 
 import (
-	"os/exec"
-	"git-platform.dbc.dk/platform/morph/nix"
 	"fmt"
+	"git-platform.dbc.dk/platform/morph/nix"
 	"io"
+	"os/exec"
 )
 
 var sudoCMD = "sudo -S -p '' -k "
@@ -26,7 +26,7 @@ func ActivateConfiguration(host nix.Host, configuration string, action string, s
 	if err != nil {
 		return err
 	}
-	io.WriteString(stdin, sudoPasswd + "\n")
+	io.WriteString(stdin, sudoPasswd+"\n")
 	defer stdin.Close()
 
 	out, err := cmd.CombinedOutput()

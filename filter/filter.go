@@ -21,7 +21,7 @@ func FilterHosts(allHosts []nix.Host, skip int, every int, limit int) (hosts []n
 	// skip first $skip hosts
 	for index, host := range allHosts[skip:] {
 		// select every $every hosts
-		if index % every == 0 {
+		if index%every == 0 {
 			hosts = append(hosts, host)
 		}
 	}

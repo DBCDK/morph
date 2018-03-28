@@ -82,7 +82,7 @@ func GetNixSystemPath(host Host, resultPath string) (string, error) {
 }
 
 func GetNixSystemDerivation(host Host, resultPath string) (string, error) {
-	return os.Readlink(filepath.Join(resultPath, host.Name + ".drv"))
+	return os.Readlink(filepath.Join(resultPath, host.Name+".drv"))
 }
 
 func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
@@ -106,7 +106,7 @@ func Push(host Host, paths ...string) (err error) {
 		cmd := exec.Command(
 			"nix", "copy",
 			path,
-			"--to", "ssh://" + host.TargetHost,
+			"--to", "ssh://"+host.TargetHost,
 		)
 
 		cmd.Stdout = os.Stdout

@@ -90,7 +90,6 @@ func main() {
 		nix.Push(host, paths...)
 	}
 
-
 	fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
 	sudoPasswd := ""
 	if *deployAskForSudoPasswd && *switchAction != "dry-activate" {
