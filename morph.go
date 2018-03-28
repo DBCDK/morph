@@ -73,50 +73,50 @@ func main() {
 	fmt.Println("nix result path: " + resultPath)
 	fmt.Println()
 
-	if !*deployDryRun {
-		for _, host := range filteredHosts {
-			paths, err := nix.GetPathsToPush(host, resultPath)
-			if err != nil {
-				panic(err)
-			}
-			fmt.Printf("Pushing paths to %v:\n", host.TargetHost)
-			for _, path := range paths {
-				fmt.Printf("\t* %s\n", path)
-			}
-			nix.Push(host, paths...)
-		}
-
-
-		fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
-		sudoPasswd := ""
-		if *deployAskForSudoPasswd && *switchAction != "dry-activate" {
-			fmt.Print("Please enter remote sudo password: ")
-			bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-			if err != nil {
-				panic(err)
-			}
-			sudoPasswd = string(bytePassword)
-			fmt.Println()
-		}
-
-		fmt.Println()
-		for _, host := range filteredHosts {
-
-			fmt.Println("** " + host.TargetHost)
-
-			configuration, err := nix.GetNixSystemPath(host, resultPath)
-			if err != nil {
-				panic(err)
-			}
-
-			err = ssh.ActivateConfiguration(host, configuration, *switchAction, sudoPasswd)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-	} else {
+	if *deployDryRun {
 		fmt.Println("Keeping it dry, aborting before connecting to any hosts ...")
+		return
+	}
+
+	for _, host := range filteredHosts {
+		paths, err := nix.GetPathsToPush(host, resultPath)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Pushing paths to %v:\n", host.TargetHost)
+		for _, path := range paths {
+			fmt.Printf("\t* %s\n", path)
+		}
+		nix.Push(host, paths...)
+	}
+
+
+	fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
+	sudoPasswd := ""
+	if *deployAskForSudoPasswd && *switchAction != "dry-activate" {
+		fmt.Print("Please enter remote sudo password: ")
+		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+		if err != nil {
+			panic(err)
+		}
+		sudoPasswd = string(bytePassword)
+		fmt.Println()
+	}
+
+	fmt.Println()
+	for _, host := range filteredHosts {
+
+		fmt.Println("** " + host.TargetHost)
+
+		configuration, err := nix.GetNixSystemPath(host, resultPath)
+		if err != nil {
+			panic(err)
+		}
+
+		err = ssh.ActivateConfiguration(host, configuration, *switchAction, sudoPasswd)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 }
