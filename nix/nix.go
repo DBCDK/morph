@@ -120,3 +120,15 @@ func Push(host Host, paths ...string) (err error) {
 
 	return nil
 }
+
+func GetHostname(host Host) string {
+	return host.TargetHost
+}
+
+func GetHostnames(hosts []Host) (hostnames []string) {
+	for _, host := range hosts {
+		hostnames = append(hostnames, GetHostname(host))
+	}
+
+	return
+}

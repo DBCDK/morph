@@ -45,25 +45,25 @@ func main() {
 	defer assets.Teardown(assetRoot)
 
 	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
-	fmt.Println(assetRoot)
-
 	// assets done
 
-	fmt.Println((*deployment).Name())
 	hosts, err := nix.GetMachines(evalMachinesPath, *deployment)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(hosts)
 	matchingHosts, err := filter.MatchHosts(hosts, *deployOn)
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println(matchingHosts)
 	filteredHosts := filter.FilterHosts(matchingHosts, *deploySkip, *deployEvery, *deployLimit)
-	fmt.Println(filteredHosts)
+
+	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(hosts), len(hosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
+	for index, hostname := range nix.GetHostnames(filteredHosts) {
+		fmt.Printf("\t%3d: %s\n", index, hostname)
+	}
+	fmt.Println()
 
 	resultPath, err := nix.BuildMachines(evalMachinesPath, *deployment, filteredHosts)
 	if err != nil {
