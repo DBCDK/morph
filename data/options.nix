@@ -4,6 +4,22 @@ with lib;
 
 let
 
+ownerOptionsType = types.submodule({ ... }: {
+    options = {
+        group = mkOption {
+            type = types.str;
+            description = "Group that will own the secret.";
+            default = "root";
+        };
+
+        user = mkOption {
+            type = types.str;
+            description = "User who will own the secret.";
+            default = "root";
+        };
+    };
+});
+
 keyOptionsType = types.submodule ({ ... }: {
   options = {
     destination = mkOption {
@@ -14,6 +30,20 @@ keyOptionsType = types.submodule ({ ... }: {
     source = mkOption {
       type = types.str;
       description = "Local path";
+    };
+
+    owner = mkOption {
+      default = {};
+      type = ownerOptionsType;
+      description = ''
+        Owner of the secret.
+      '';
+    };
+
+    permissions = mkOption {
+      default = "0400";
+      type = types.str;
+      description = "Permissions expressed as octal.";
     };
   };
 });

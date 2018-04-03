@@ -5,6 +5,7 @@ import (
 	"git-platform.dbc.dk/platform/morph/assets"
 	"git-platform.dbc.dk/platform/morph/filter"
 	"git-platform.dbc.dk/platform/morph/nix"
+	"git-platform.dbc.dk/platform/morph/secrets"
 	"git-platform.dbc.dk/platform/morph/ssh"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -60,8 +61,8 @@ func main() {
 	filteredHosts := filter.FilterHosts(matchingHosts, *selectSkip, *selectEvery, *selectLimit)
 
 	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(hosts), len(hosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
-	for index, hostname := range nix.GetHostnames(filteredHosts) {
-		fmt.Printf("\t%3d: %s\n", index, hostname)
+	for index, host := range filteredHosts {
+		fmt.Printf("\t%3d: %s (secrets: %d)\n", index, nix.GetHostname(host), len(host.Secrets))
 	}
 	fmt.Println()
 
@@ -94,11 +95,12 @@ func main() {
 		nix.Push(host, paths...)
 	}
 
+	fmt.Println()
+
 	if *switchAction == "push" {
 		return
 	}
 
-	fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
 	sudoPasswd := ""
 	if *deployAskForSudoPasswd && *switchAction != "dry-activate" {
 		fmt.Print("Please enter remote sudo password: ")
@@ -108,7 +110,33 @@ func main() {
 		}
 		sudoPasswd = string(bytePassword)
 		fmt.Println()
+		fmt.Println()
 	}
+
+	// upload secrets
+	// relative paths are resolved relative to the deployment file (!)
+	deploymentDir := filepath.Dir((*deployment).Name())
+
+	for _, host := range filteredHosts {
+		fmt.Printf("Uploading secrets to %s:\n", nix.GetHostname(host))
+		for secretName, secret := range host.Secrets {
+			secretSize, err := secrets.GetSecretSize(secret, deploymentDir)
+			if err != nil {
+				panic(err)
+			}
+
+			fmt.Printf("\t* %s (%d bytes).. ", secretName, secretSize)
+			err = secrets.UploadSecret(host, sudoPasswd, secret, deploymentDir)
+			if err != nil {
+				fmt.Println("Failed")
+				panic(err)
+			} else {
+				fmt.Println("OK")
+			}
+		}
+	}
+
+	fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
 
 	fmt.Println()
 	for _, host := range filteredHosts {

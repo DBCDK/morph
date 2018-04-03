@@ -12,6 +12,19 @@ type Host struct {
 	Name         string
 	NixosRelease string
 	TargetHost   string
+	Secrets      map[string]Secret
+}
+
+type Secret struct {
+	Source      string
+	Destination string
+	Owner       Owner
+	Permissions string
+}
+
+type Owner struct {
+	Group string
+	User  string
 }
 
 func GetMachines(evalMachines string, deploymentFile *os.File) (hosts []Host, err error) {
