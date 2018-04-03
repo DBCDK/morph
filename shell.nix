@@ -14,4 +14,9 @@ in
       dep
       bashInteractive
     ];
+
+    shellHook = ''
+      PATH="$(pwd):$PATH"
+      source <(./morph --completion-script-bash)
+    '';
   }
