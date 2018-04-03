@@ -5,3 +5,10 @@
 
 # Default binary output file name
 /morph
+
+# vendor cache dir
+/vendor
+
+# go2nix outfiles
+/default.nix
+/deps.nix
