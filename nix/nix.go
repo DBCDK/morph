@@ -27,11 +27,11 @@ type Owner struct {
 	User  string
 }
 
-func GetMachines(evalMachines string, deploymentFile *os.File) (hosts []Host, err error) {
+func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err error) {
 	cmd := exec.Command(
 		"nix", "eval",
 		"-f", evalMachines, "info.machineList",
-		"--arg", "networkExpr", deploymentFile.Name(),
+		"--arg", "networkExpr", deploymentPath,
 		"--json",
 	)
 
@@ -48,7 +48,7 @@ func GetMachines(evalMachines string, deploymentFile *os.File) (hosts []Host, er
 	return hosts, nil
 }
 
-func BuildMachines(evalMachines string, deploymentFile *os.File, hosts []Host) (path string, err error) {
+func BuildMachines(evalMachines string, deploymentPath string, hosts []Host) (path string, err error) {
 	hostsArg := "["
 	for _, host := range hosts {
 		hostsArg += "\"" + host.TargetHost + "\" "
@@ -67,7 +67,7 @@ func BuildMachines(evalMachines string, deploymentFile *os.File, hosts []Host) (
 	cmd := exec.Command(
 		"nix", "build",
 		"-f", evalMachines, "machines",
-		"--arg", "networkExpr", deploymentFile.Name(),
+		"--arg", "networkExpr", deploymentPath,
 		"--arg", "names", hostsArg,
 		"--out-link", resultLinkPath,
 	)

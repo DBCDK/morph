@@ -104,8 +104,12 @@ func build() ([]nix.Host, string) {
 
 	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
 	// assets done
+	deploymentPath, err := filepath.Abs((*deployment).Name())
+	if err != nil {
+		panic(err)
+	}
 
-	hosts, err := nix.GetMachines(evalMachinesPath, *deployment)
+	hosts, err := nix.GetMachines(evalMachinesPath, deploymentPath)
 	if err != nil {
 		panic(err)
 	}
@@ -123,7 +127,7 @@ func build() ([]nix.Host, string) {
 	}
 	fmt.Println()
 
-	resultPath, err := nix.BuildMachines(evalMachinesPath, *deployment, filteredHosts)
+	resultPath, err := nix.BuildMachines(evalMachinesPath, deploymentPath, filteredHosts)
 	if err != nil {
 		panic(err)
 	}
