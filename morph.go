@@ -30,14 +30,71 @@ var (
 	tempDir, tempDirErr = ioutil.TempDir("", "morph-")
 )
 
+var doPush = false
+var doAskPass = false
+var doUploadSecrets = false
+var doActivate = false
+
 func init() {
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	if tempDirErr != nil {
 		panic(tempDirErr)
 	}
+
+	if !*dryRun {
+		switch *switchAction {
+		case "push":
+			doPush = true
+		case "dry-activate":
+			doPush = true
+			// fixme (in ssh/ssh.go) - should be possible to dry-activate without sudo
+			if *deployAskForSudoPasswd {
+				doAskPass = true
+			}
+			doActivate = true
+		case "test":
+			fallthrough
+		case "switch":
+			fallthrough
+		case "boot":
+			doPush = true
+			if *deployAskForSudoPasswd {
+				doAskPass = true
+			}
+			doUploadSecrets = true
+			doActivate = true
+		}
+	}
 }
 
 func main() {
+
+	filteredHosts, resultPath := build()
+	fmt.Println()
+
+	if doPush {
+		pushPaths(filteredHosts, resultPath)
+	}
+	fmt.Println()
+
+	sudoPasswd := ""
+	if doAskPass {
+		sudoPasswd = askForSudoPassword()
+		fmt.Println()
+		fmt.Println()
+	}
+
+	if doUploadSecrets {
+		uploadSecrets(filteredHosts, sudoPasswd)
+	}
+
+	if doActivate {
+		activateConfiguration(filteredHosts, resultPath, sudoPasswd)
+	}
+
+}
+
+func build() ([]nix.Host, string) {
 	// setup assets
 	assetRoot, err := assets.Setup()
 	if err != nil {
@@ -72,17 +129,19 @@ func main() {
 	}
 
 	fmt.Println("nix result path: " + resultPath)
-	fmt.Println()
+	return filteredHosts, resultPath
+}
 
-	if *switchAction == "build" {
-		return
+func askForSudoPassword() string {
+	fmt.Print("Please enter remote sudo password: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		panic(err)
 	}
+	return string(bytePassword)
+}
 
-	if *dryRun {
-		fmt.Println("Keeping it dry, aborting before connecting to any hosts ...")
-		return
-	}
-
+func pushPaths(filteredHosts []nix.Host, resultPath string) {
 	for _, host := range filteredHosts {
 		paths, err := nix.GetPathsToPush(host, resultPath)
 		if err != nil {
@@ -94,29 +153,12 @@ func main() {
 		}
 		nix.Push(host, paths...)
 	}
+}
 
-	fmt.Println()
-
-	if *switchAction == "push" {
-		return
-	}
-
-	sudoPasswd := ""
-	if *deployAskForSudoPasswd && *switchAction != "dry-activate" {
-		fmt.Print("Please enter remote sudo password: ")
-		bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-		if err != nil {
-			panic(err)
-		}
-		sudoPasswd = string(bytePassword)
-		fmt.Println()
-		fmt.Println()
-	}
-
+func uploadSecrets(filteredHosts []nix.Host, sudoPasswd string) {
 	// upload secrets
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir((*deployment).Name())
-
 	for _, host := range filteredHosts {
 		fmt.Printf("Uploading secrets to %s:\n", nix.GetHostname(host))
 		for secretName, secret := range host.Secrets {
@@ -135,9 +177,10 @@ func main() {
 			}
 		}
 	}
+}
 
+func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPasswd string) {
 	fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
-
 	fmt.Println()
 	for _, host := range filteredHosts {
 
@@ -153,5 +196,4 @@ func main() {
 			panic(err)
 		}
 	}
-
 }
