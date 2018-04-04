@@ -3,20 +3,12 @@ package secrets
 import (
 	"git-platform.dbc.dk/platform/morph/nix"
 	"git-platform.dbc.dk/platform/morph/ssh"
+	"git-platform.dbc.dk/platform/morph/utils"
 	"os"
-	"path/filepath"
 )
 
-func GetAbsSourcePath(path string, directory string) string {
-	if filepath.IsAbs(path) {
-		return path
-	} else {
-		return filepath.Join(directory, path)
-	}
-}
-
 func GetSecretSize(secret nix.Secret, deploymentWD string) (size int64, err error) {
-	fh, err := os.Open(GetAbsSourcePath(secret.Source, deploymentWD))
+	fh, err := os.Open(utils.GetAbsPathRelativeTo(secret.Source, deploymentWD))
 	if err != nil {
 		return size, err
 	}
@@ -35,7 +27,7 @@ func UploadSecret(host nix.Host, sudoPasswd string, secret nix.Secret, deploymen
 		return err
 	}
 
-	err = ssh.UploadFile(host, GetAbsSourcePath(secret.Source, deploymentWD), tempPath)
+	err = ssh.UploadFile(host, utils.GetAbsPathRelativeTo(secret.Source, deploymentWD), tempPath)
 	if err != nil {
 		return err
 	}
