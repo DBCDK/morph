@@ -44,11 +44,18 @@ func init() {
 	if !*dryRun {
 		switch *switchAction {
 		case "push":
+			doPush = true
 		case "dry-activate":
 			doPush = true
+			// fixme (in ssh/ssh.go) - should be possible to dry-activate without sudo
+			if *deployAskForSudoPasswd {
+				doAskPass = true
+			}
+			doActivate = true
 		case "test":
 		case "switch":
 		case "boot":
+			doPush = true
 			if *deployAskForSudoPasswd {
 				doAskPass = true
 			}
