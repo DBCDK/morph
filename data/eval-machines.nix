@@ -21,6 +21,7 @@ rec {
       in
       { name = machineName;
         value = import "${toString pkgs.path}/nixos/lib/eval-config.nix" {
+          inherit pkgs;
           modules =
             modules ++
             [ { key = "deploy-stuff";
