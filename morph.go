@@ -53,7 +53,9 @@ func init() {
 			}
 			doActivate = true
 		case "test":
+			fallthrough
 		case "switch":
+			fallthrough
 		case "boot":
 			doPush = true
 			if *deployAskForSudoPasswd {
