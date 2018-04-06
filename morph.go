@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/assets"
 	"git-platform.dbc.dk/platform/morph/filter"
+	"git-platform.dbc.dk/platform/morph/healthchecks"
 	"git-platform.dbc.dk/platform/morph/nix"
 	"git-platform.dbc.dk/platform/morph/secrets"
 	"git-platform.dbc.dk/platform/morph/ssh"
@@ -222,5 +223,9 @@ func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPass
 		if err != nil {
 			panic(err)
 		}
+
+		fmt.Println()
+
+		healthchecks.Perform(host)
 	}
 }

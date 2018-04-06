@@ -48,6 +48,55 @@ keyOptionsType = types.submodule ({ ... }: {
   };
 });
 
+healthCheckType = types.submodule ({ ... }: {
+  options = {
+    description = mkOption {
+        type = types.str;
+        description = "Health check description";
+    };
+    host = mkOption {
+      type = types.nullOr types.str;
+      description = "Host name";
+      default = null;
+      #default = config.networking.hostName;
+    };
+    scheme = mkOption {
+      type = types.str;
+      description = "Scheme";
+      default = "http";
+    };
+    port = mkOption {
+      type = types.int;
+      description = "Port number";
+    };
+    path = mkOption {
+      type = types.path;
+      description = "HTTP request path";
+      default = "/";
+    };
+    headers = mkOption {
+      type = types.attrsOf types.str;
+      description = "not implemented";
+      default = {};
+    };
+    period = mkOption {
+      type = types.int;
+      description = "Seconds between checks";
+      default = 2;
+    };
+    timeout = mkOption {
+      type = types.int;
+      description = "Timeout in seconds";
+      default = 5;
+    };
+    insecureSSL = mkOption {
+      type = types.bool;
+      description = "Ignore SSL errors";
+      default = false;
+    };
+  };
+});
+
 in
 
 {
@@ -62,6 +111,13 @@ in
       description = ''
         Attrset where each attribute describes a key to be copied via ssh
         instead of through the Nix closure (keeping it out of the Nix store.)
+      '';
+    };
+    healthChecks = mkOption {
+      type = types.listOf healthCheckType;
+      default = [];
+      description = ''
+        List of health checks.
       '';
     };
   };
