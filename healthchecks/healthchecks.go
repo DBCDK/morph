@@ -35,8 +35,8 @@ func Perform(host nix.Host) (err error) {
 
 func runCheck(host nix.Host, healthCheck nix.HealthCheck) (err error) {
 	hostname := nix.GetHostname(host)
-	if healthCheck.Host == nil {
-		hostname = nix.GetHostname(host)
+	if healthCheck.Host != nil {
+		hostname = *healthCheck.Host
 	}
 
 	transport := &http.Transport{}
