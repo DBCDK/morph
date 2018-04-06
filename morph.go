@@ -30,7 +30,8 @@ var (
 	deployDeployment       = deploy.Arg("deployment", "File containing the deployment exec expression").Required().File()
 	switchAction           = deploy.Arg("switch-action", "Either of build|push|dry-activate|test|switch|boot").Required().Enum("build", "push", "dry-activate", "test", "switch", "boot")
 	deployAskForSudoPasswd = deploy.Flag("passwd", "Whether to ask interactively for remote sudo password").Default("False").Bool()
-	healthCheck            = app.Command("healthcheck", "Run health checks")
+	deploySkipHealthChecks = deploy.Flag("skip-health-checks", "Whether to ask interactively for remote sudo password").Default("False").Bool()
+	healthCheck            = app.Command("check-health", "Run health checks")
 	healthCheckDeployment  = healthCheck.Arg("deployment", "File containing the deployment exec expression").Required().File()
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
@@ -52,11 +53,23 @@ func init() {
 		panic(assetsErr)
 	}
 
-	kingpin.MustParse(app.Parse(os.Args[1:]))
 	if tempDirErr != nil {
 		panic(tempDirErr)
 	}
+}
 
+func main() {
+	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
+	case deploy.FullCommand():
+		doDeploy()
+	case healthCheck.FullCommand():
+		doHealthCheck()
+	}
+
+	assets.Teardown(assetRoot)
+}
+
+func doDeploy() {
 	if !*dryRun {
 		switch *switchAction {
 		case "push":
@@ -81,20 +94,6 @@ func init() {
 			doActivate = true
 		}
 	}
-}
-
-func main() {
-	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
-	case deploy.FullCommand():
-		doDeploy()
-	case healthCheck.FullCommand():
-		doHealthCheck()
-	}
-
-	assets.Teardown(assetRoot)
-}
-
-func doDeploy() {
 
 	hosts, resultPath := build()
 	fmt.Println()
@@ -266,6 +265,8 @@ func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPass
 
 		fmt.Println()
 
-		healthchecks.Perform(host)
+		if !*deploySkipHealthChecks {
+			healthchecks.Perform(host)
+		}
 	}
 }
