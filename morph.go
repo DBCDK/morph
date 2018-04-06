@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/assets"
 	"git-platform.dbc.dk/platform/morph/filter"
@@ -11,7 +12,9 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 )
 
@@ -68,6 +71,9 @@ func init() {
 }
 
 func main() {
+	if err := validateEnvironment(); err != nil {
+		panic(err)
+	}
 
 	filteredHosts, resultPath := build()
 	fmt.Println()
@@ -92,6 +98,23 @@ func main() {
 		activateConfiguration(filteredHosts, resultPath, sudoPasswd)
 	}
 
+}
+
+func validateEnvironment() (err error) {
+	dependencies := []string{"nix", "scp", "ssh"}
+	missingDepencies := make([]string, 0)
+	for _, dependency := range dependencies {
+		_, err := exec.LookPath(dependency)
+		if err != nil {
+			missingDepencies = append(missingDepencies, dependency)
+		}
+	}
+
+	if len(missingDepencies) > 0 {
+		return errors.New("Missing dependencies: " + strings.Join(missingDepencies, ", "))
+	}
+
+	return nil
 }
 
 func build() ([]nix.Host, string) {

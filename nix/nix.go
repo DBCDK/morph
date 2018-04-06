@@ -2,6 +2,8 @@ package nix
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -35,9 +37,13 @@ func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err 
 		"--json",
 	)
 
-	bytes, err := cmd.Output()
+	bytes, err := cmd.CombinedOutput()
 	if err != nil {
-		return hosts, err
+		fmt.Println(err)
+		errorMessage := fmt.Sprintf(
+			"Error while running `nix eval ..`:\n%s", string(bytes),
+		)
+		return hosts, errors.New(errorMessage)
 	}
 
 	err = json.Unmarshal(bytes, &hosts)
@@ -79,7 +85,10 @@ func BuildMachines(evalMachines string, deploymentPath string, hosts []Host) (pa
 	err = cmd.Run()
 
 	if err != nil {
-		return "", err
+		errorMessage := fmt.Sprintf(
+			"Error while running `nix build ...`: See above.",
+		)
+		return path, errors.New(errorMessage)
 	}
 
 	resultPath, err := os.Readlink(resultLinkPath)
