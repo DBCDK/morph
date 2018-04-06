@@ -27,11 +27,14 @@ var (
 	selectSkip             = app.Flag("skip", "Skip first n hosts").Default("0").Int()
 	selectLimit            = app.Flag("limit", "Select at most n hosts").Int()
 	deploy                 = app.Command("deploy", "Deploy machines")
-	deployment             = deploy.Arg("deployment", "File containing the deployment exec expression").Required().File()
+	deployDeployment       = deploy.Arg("deployment", "File containing the deployment exec expression").Required().File()
 	switchAction           = deploy.Arg("switch-action", "Either of build|push|dry-activate|test|switch|boot").Required().Enum("build", "push", "dry-activate", "test", "switch", "boot")
 	deployAskForSudoPasswd = deploy.Flag("passwd", "Whether to ask interactively for remote sudo password").Default("False").Bool()
+	healthCheck            = app.Command("healthcheck", "Run health checks")
+	healthCheckDeployment  = healthCheck.Arg("deployment", "File containing the deployment exec expression").Required().File()
 
-	tempDir, tempDirErr = ioutil.TempDir("", "morph-")
+	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
+	assetRoot, assetsErr = assets.Setup()
 )
 
 var doPush = false
@@ -40,6 +43,15 @@ var doUploadSecrets = false
 var doActivate = false
 
 func init() {
+	if err := validateEnvironment(); err != nil {
+		panic(err)
+	}
+
+	if assetsErr != nil {
+		fmt.Println("Error unpacking assets:")
+		panic(assetsErr)
+	}
+
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 	if tempDirErr != nil {
 		panic(tempDirErr)
@@ -72,15 +84,23 @@ func init() {
 }
 
 func main() {
-	if err := validateEnvironment(); err != nil {
-		panic(err)
+	switch kingpin.MustParse(app.Parse(os.Args[1:])) {
+	case deploy.FullCommand():
+		doDeploy()
+	case healthCheck.FullCommand():
+		doHealthCheck()
 	}
 
-	filteredHosts, resultPath := build()
+	assets.Teardown(assetRoot)
+}
+
+func doDeploy() {
+
+	hosts, resultPath := build()
 	fmt.Println()
 
 	if doPush {
-		pushPaths(filteredHosts, resultPath)
+		pushPaths(hosts, resultPath)
 	}
 	fmt.Println()
 
@@ -92,13 +112,24 @@ func main() {
 	}
 
 	if doUploadSecrets {
-		uploadSecrets(filteredHosts, sudoPasswd)
+		uploadSecrets(hosts, sudoPasswd)
 	}
 
 	if doActivate {
-		activateConfiguration(filteredHosts, resultPath, sudoPasswd)
+		activateConfiguration(hosts, resultPath, sudoPasswd)
 	}
 
+}
+
+func doHealthCheck() {
+	hosts, err := getHosts(*healthCheckDeployment)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, host := range hosts {
+		healthchecks.Perform(host)
+	}
 }
 
 func validateEnvironment() (err error) {
@@ -118,46 +149,55 @@ func validateEnvironment() (err error) {
 	return nil
 }
 
-func build() ([]nix.Host, string) {
-	// setup assets
-	assetRoot, err := assets.Setup()
-	if err != nil {
-		panic(err)
-	}
-	defer assets.Teardown(assetRoot)
-
+func getHosts(deployment *os.File) (hosts []nix.Host, err error) {
 	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
-	// assets done
-	deploymentPath, err := filepath.Abs((*deployment).Name())
+
+	deploymentPath, err := filepath.Abs(deployment.Name())
 	if err != nil {
-		panic(err)
+		return hosts, err
 	}
 
-	hosts, err := nix.GetMachines(evalMachinesPath, deploymentPath)
+	allHosts, err := nix.GetMachines(evalMachinesPath, deploymentPath)
 	if err != nil {
-		panic(err)
+		return hosts, err
 	}
 
-	matchingHosts, err := filter.MatchHosts(hosts, *selectGlob)
+	matchingHosts, err := filter.MatchHosts(allHosts, *selectGlob)
 	if err != nil {
-		panic(err)
+		return hosts, err
 	}
 
 	filteredHosts := filter.FilterHosts(matchingHosts, *selectSkip, *selectEvery, *selectLimit)
 
-	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(hosts), len(hosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
+	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Printf("\t%3d: %s (secrets: %d)\n", index, nix.GetHostname(host), len(host.Secrets))
+		fmt.Printf("\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks))
 	}
 	fmt.Println()
 
-	resultPath, err := nix.BuildMachines(evalMachinesPath, deploymentPath, filteredHosts)
+	return filteredHosts, nil
+}
+
+func build() ([]nix.Host, string) {
+	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
+
+	deploymentPath, err := filepath.Abs((*deployDeployment).Name())
+	if err != nil {
+		panic(err)
+	}
+
+	hosts, err := getHosts(*deployDeployment)
+	if err != nil {
+		panic(err)
+	}
+
+	resultPath, err := nix.BuildMachines(evalMachinesPath, deploymentPath, hosts)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("nix result path: " + resultPath)
-	return filteredHosts, resultPath
+	return hosts, resultPath
 }
 
 func askForSudoPassword() string {
@@ -186,7 +226,7 @@ func pushPaths(filteredHosts []nix.Host, resultPath string) {
 func uploadSecrets(filteredHosts []nix.Host, sudoPasswd string) {
 	// upload secrets
 	// relative paths are resolved relative to the deployment file (!)
-	deploymentDir := filepath.Dir((*deployment).Name())
+	deploymentDir := filepath.Dir((*deployDeployment).Name())
 	for _, host := range filteredHosts {
 		fmt.Printf("Uploading secrets to %s:\n", nix.GetHostname(host))
 		for secretName, secret := range host.Secrets {
