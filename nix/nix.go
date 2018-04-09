@@ -67,7 +67,7 @@ type VaultOptions struct {
 type HealthCheck interface {
 	GetDescription() string
 	GetPeriod() int
-	Run() error
+	Run(Host) error
 }
 
 func (healthCheck CmdHealthCheck) GetDescription() string {
@@ -78,8 +78,22 @@ func (healthCheck CmdHealthCheck) GetPeriod() int {
 	return healthCheck.Period
 }
 
-func (healthCheck CmdHealthCheck) Run() error {
-	return errors.New("not implemented")
+func (healthCheck CmdHealthCheck) Run(host Host) error {
+	args := []string{GetHostname(host)}
+	args = append(args, healthCheck.Cmd...)
+
+	cmd := exec.Command(
+		"ssh", args...,
+	)
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		errorMessage := fmt.Sprintf("Health check error: %s", string(data))
+		return errors.New(errorMessage)
+	}
+
+	return nil
+
 }
 
 func (healthCheck HttpHealthCheck) GetDescription() string {
@@ -90,7 +104,13 @@ func (healthCheck HttpHealthCheck) GetPeriod() int {
 	return healthCheck.Period
 }
 
-func (healthCheck HttpHealthCheck) Run() error {
+func (healthCheck HttpHealthCheck) Run(host Host) error {
+	// use the hosts hostname if the healthCheck host is not set
+	if healthCheck.Host == nil {
+		replacementHostname := GetHostname(host)
+		healthCheck.Host = &replacementHostname
+	}
+
 	transport := &http.Transport{}
 
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: healthCheck.InsecureSSL}

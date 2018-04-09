@@ -12,14 +12,13 @@ func Perform(host nix.Host, timeout int) (err error) {
 	fmt.Printf("Running healthchecks on %s:\n", nix.GetHostname(host))
 
 	wg := sync.WaitGroup{}
-	for _, healthCheck := range host.HealthChecks.Http {
-		// use the hosts hostname if the healthCheck host is not set
-		if healthCheck.Host == nil {
-			replacementHostname := nix.GetHostname(host)
-			healthCheck.Host = &replacementHostname
-		}
+	for _, healthCheck := range host.HealthChecks.Cmd {
 		wg.Add(1)
-		go httpRunCheckUntilSuccess(healthCheck, &wg)
+		go runCheckUntilSuccess(host, healthCheck, &wg)
+	}
+	for _, healthCheck := range host.HealthChecks.Http {
+		wg.Add(1)
+		go runCheckUntilSuccess(host, healthCheck, &wg)
 	}
 
 	doneChan := make(chan bool)
@@ -54,9 +53,9 @@ func Perform(host nix.Host, timeout int) (err error) {
 	return nil
 }
 
-func httpRunCheckUntilSuccess(healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
+func runCheckUntilSuccess(host nix.Host, healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
 	for {
-		err := healthCheck.Run()
+		err := healthCheck.Run(host)
 		if err == nil {
 			fmt.Printf("\t* %s: OK\n", healthCheck.GetDescription())
 			break
