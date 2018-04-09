@@ -1,17 +1,20 @@
 package nix
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 )
 
 type Host struct {
-	HealthChecks []HealthCheck
+	HealthChecks HealthChecks
 	Name         string
 	NixosRelease string
 	TargetHost   string
@@ -19,7 +22,19 @@ type Host struct {
 	Vault		 VaultOptions
 }
 
-type HealthCheck struct {
+type HealthChecks struct {
+	Http []HttpHealthCheck
+	Cmd []CmdHealthCheck
+}
+
+type CmdHealthCheck struct {
+	Description string
+	Cmd []string
+	Period      int
+	Timeout     int
+}
+
+type HttpHealthCheck struct {
 	Description string
 	Headers     map[string]string
 	Host        *string
@@ -47,6 +62,84 @@ type VaultOptions struct {
 	CIDRs []string
 	Policies []string
 	TTL string
+}
+
+type HealthCheck interface {
+	GetDescription() string
+	GetPeriod() int
+	Run(Host) error
+}
+
+func (healthCheck CmdHealthCheck) GetDescription() string {
+	return healthCheck.Description
+}
+
+func (healthCheck CmdHealthCheck) GetPeriod() int {
+	return healthCheck.Period
+}
+
+func (healthCheck CmdHealthCheck) Run(host Host) error {
+	args := []string{GetHostname(host)}
+	args = append(args, healthCheck.Cmd...)
+
+	cmd := exec.Command(
+		"ssh", args...,
+	)
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		errorMessage := fmt.Sprintf("Health check error: %s", string(data))
+		return errors.New(errorMessage)
+	}
+
+	return nil
+
+}
+
+func (healthCheck HttpHealthCheck) GetDescription() string {
+	return healthCheck.Description
+}
+
+func (healthCheck HttpHealthCheck) GetPeriod() int {
+	return healthCheck.Period
+}
+
+func (healthCheck HttpHealthCheck) Run(host Host) error {
+	// use the hosts hostname if the healthCheck host is not set
+	if healthCheck.Host == nil {
+		replacementHostname := GetHostname(host)
+		healthCheck.Host = &replacementHostname
+	}
+
+	transport := &http.Transport{}
+
+	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: healthCheck.InsecureSSL}
+
+	client := &http.Client{
+		Timeout:   time.Duration(healthCheck.Timeout) * time.Second,
+		Transport: transport,
+	}
+
+	url := fmt.Sprintf("%s://%s:%d%s", healthCheck.Scheme, *healthCheck.Host, healthCheck.Port, healthCheck.Path)
+	req, err := http.NewRequest("GET", url, nil)
+
+	for headerKey, headerValue := range healthCheck.Headers {
+		req.Header.Add(headerKey, headerValue)
+	}
+
+	resp, err := client.Get(url)
+
+	if err != nil {
+		return err
+	}
+
+	resp.Body.Close()
+
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	} else {
+		return errors.New(fmt.Sprintf("Got non 2xx status code (%s)", resp.Status))
+	}
 }
 
 func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err error) {

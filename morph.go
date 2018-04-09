@@ -215,7 +215,7 @@ func getHosts(deployment *os.File) (hosts []nix.Host, err error) {
 
 	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Printf("\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks))
+		fmt.Printf("\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks.Cmd) + len(host.HealthChecks.Http))
 	}
 	fmt.Println()
 

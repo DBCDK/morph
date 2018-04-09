@@ -1,11 +1,9 @@
 package healthchecks
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/nix"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -14,14 +12,13 @@ func Perform(host nix.Host, timeout int) (err error) {
 	fmt.Printf("Running healthchecks on %s:\n", nix.GetHostname(host))
 
 	wg := sync.WaitGroup{}
-	for _, healthCheck := range host.HealthChecks {
-		// use the hosts hostname if the healthCheck host is not set
-		if healthCheck.Host == nil {
-			replacementHostname := nix.GetHostname(host)
-			healthCheck.Host = &replacementHostname
-		}
+	for _, healthCheck := range host.HealthChecks.Cmd {
 		wg.Add(1)
-		go runCheckUntilSuccess(healthCheck, &wg)
+		go runCheckUntilSuccess(host, healthCheck, &wg)
+	}
+	for _, healthCheck := range host.HealthChecks.Http {
+		wg.Add(1)
+		go runCheckUntilSuccess(host, healthCheck, &wg)
 	}
 
 	doneChan := make(chan bool)
@@ -56,48 +53,16 @@ func Perform(host nix.Host, timeout int) (err error) {
 	return nil
 }
 
-func runCheckUntilSuccess(healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
+func runCheckUntilSuccess(host nix.Host, healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
 	for {
-		err := runCheck(healthCheck)
+		err := healthCheck.Run(host)
 		if err == nil {
-			fmt.Printf("\t* %s: OK\n", healthCheck.Description)
+			fmt.Printf("\t* %s: OK\n", healthCheck.GetDescription())
 			break
 		} else {
-			fmt.Printf("\t* %s: Failed (%s)\n", healthCheck.Description, err)
-			time.Sleep(time.Duration(healthCheck.Period) * time.Second)
+			fmt.Printf("\t* %s: Failed (%s)\n", healthCheck.GetDescription(), err)
+			time.Sleep(time.Duration(healthCheck.GetPeriod()) * time.Second)
 		}
 	}
 	wg.Done()
-}
-
-func runCheck(healthCheck nix.HealthCheck) (err error) {
-	transport := &http.Transport{}
-
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: healthCheck.InsecureSSL}
-
-	client := &http.Client{
-		Timeout:   time.Duration(healthCheck.Timeout) * time.Second,
-		Transport: transport,
-	}
-
-	url := fmt.Sprintf("%s://%s:%d%s", healthCheck.Scheme, *healthCheck.Host, healthCheck.Port, healthCheck.Path)
-	req, err := http.NewRequest("GET", url, nil)
-
-	for headerKey, headerValue := range healthCheck.Headers {
-		req.Header.Add(headerKey, headerValue)
-	}
-
-	resp, err := client.Get(url)
-
-	if err != nil {
-		return err
-	}
-
-	resp.Body.Close()
-
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Got non 2xx status code (%s)", resp.Status))
-	}
 }
