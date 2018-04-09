@@ -86,17 +86,24 @@ func Configure(vc *vault.Client) error {
 	return nil
 }
 
-func CreateOrReKeyHostToken(vc *vault.Client, host nix.Host) (string, error) {
+func CreateOrReKeyHostToken(vc *vault.Client, host nix.Host) (*AppRoleCredentials, error) {
 
-	err := syncAppRole(vc, host)
+	role, err := syncAppRole(vc, host)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	secret, err := newSecretID(vc, host)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	return secret.Data["secret_id"].(string), nil
+	return &AppRoleCredentials{
+		roleID:   role.Data["role_id"].(string),
+		secretID: secret.Data["secret_id"].(string)}, nil
+}
+
+type AppRoleCredentials struct {
+	roleID   string
+	secretID string
 }
