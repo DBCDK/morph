@@ -102,11 +102,6 @@ func doDeploy() {
 	hosts, resultPath := build()
 	fmt.Println()
 
-	if doPush {
-		pushPaths(hosts, resultPath)
-	}
-	fmt.Println()
-
 	sudoPasswd := ""
 	if doAskPass {
 		sudoPasswd = askForSudoPassword()
@@ -114,19 +109,38 @@ func doDeploy() {
 		fmt.Println()
 	}
 
-	//fixme This step is currently never activated
-	if doVaultReKey {
-		vaultReKey(hosts)
-	}
+	for _, host := range hosts {
+		singleHostInList := []nix.Host{host}
 
-	if doUploadSecrets {
-		uploadSecrets(hosts, sudoPasswd)
-	}
+		if doPush {
+			pushPaths(singleHostInList, resultPath)
+		}
+		fmt.Println()
 
-	if doActivate {
-		activateConfiguration(hosts, resultPath, sudoPasswd)
-	}
 
+
+		//fixme This step is currently never activated
+		if doVaultReKey {
+			vaultReKey(singleHostInList)
+		}
+
+		if doUploadSecrets {
+			uploadSecrets(singleHostInList, sudoPasswd)
+		}
+
+		if doActivate {
+			activateConfiguration(singleHostInList, resultPath, sudoPasswd)
+		}
+
+		if !*deploySkipHealthChecks {
+			err := healthchecks.Perform(host, *deployHealthCheckTimeout)
+			if err != nil {
+				fmt.Println()
+				fmt.Println("Not deploying to additional hosts, since a host health check failed.")
+				os.Exit(1)
+			}
+		}
+	}
 }
 
 func doHealthCheck() {
@@ -309,14 +323,5 @@ func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPass
 		}
 
 		fmt.Println()
-
-		if !*deploySkipHealthChecks {
-			err = healthchecks.Perform(host, *deployHealthCheckTimeout)
-			if err != nil {
-				fmt.Println()
-				fmt.Println("Not deploying to additional hosts, since a host health check failed.")
-				os.Exit(1)
-			}
-		}
 	}
 }
