@@ -74,16 +74,66 @@ vaultOptionsType = submodule ({ ... }: {
     };
 
   };
+  
+});
 
+healthCheckType = submodule ({ ... }: {
+  options = {
+    description = mkOption {
+        type = str;
+        description = "Health check description";
+    };
+    host = mkOption {
+      type = nullOr str;
+      description = "Host name";
+      default = null;
+      #default = config.networking.hostName;
+    };
+    scheme = mkOption {
+      type = str;
+      description = "Scheme";
+      default = "http";
+    };
+    port = mkOption {
+      type = int;
+      description = "Port number";
+    };
+    path = mkOption {
+      type = path;
+      description = "HTTP request path";
+      default = "/";
+    };
+    headers = mkOption {
+      type = attrsOf str;
+      description = "not implemented";
+      default = {};
+    };
+    period = mkOption {
+      type = int;
+      description = "Seconds between checks";
+      default = 2;
+    };
+    timeout = mkOption {
+      type = int;
+      description = "Timeout in seconds";
+      default = 5;
+    };
+    insecureSSL = mkOption {
+      type = bool;
+      description = "Ignore SSL errors";
+      default = false;
+    };
+  };
 });
 
 in
-
 {
   options.deployment = {
+    
     targetHost = mkOption {
       type = str;
     };
+
     secrets = mkOption {
       default = {};
       example = { password.text = "foobar"; };
@@ -93,6 +143,15 @@ in
         instead of through the Nix closure (keeping it out of the Nix store.)
       '';
     };
+
+    healthChecks = mkOption {
+      type = listOf healthCheckType;
+      default = [];
+      description = ''
+        List of health checks.
+      '';
+    };
+    
     vault = mkOption {
       default = {};
       type = vaultOptionsType;
