@@ -6,39 +6,71 @@ import (
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/nix"
 	"net/http"
+	"sync"
 	"time"
 )
 
-func Perform(host nix.Host) (err error) {
+func Perform(host nix.Host, timeout *int) (err error) {
 	fmt.Printf("Running healthchecks on %s:\n", nix.GetHostname(host))
 
-	notOk := host.HealthChecks
-
-	for len(notOk) > 0 {
-		stillNotOk := make([]nix.HealthCheck, 0)
-
-		for _, healthCheck := range notOk {
-			fmt.Printf("\t* %s.. ", healthCheck.Description)
-			if err := runCheck(host, healthCheck); err != nil {
-				fmt.Println("Failed:", err)
-				stillNotOk = append(stillNotOk, healthCheck)
-			} else {
-				fmt.Println("OK")
-			}
+	wg := sync.WaitGroup{}
+	for _, healthCheck := range host.HealthChecks {
+		// use the hosts hostname if the healthCheck host is not set
+		if healthCheck.Host == nil {
+			replacementHostname := nix.GetHostname(host)
+			healthCheck.Host = &replacementHostname
 		}
-
-		notOk = stillNotOk
-		time.Sleep(1 * time.Second)
+		wg.Add(1)
+		go runCheckUntilSuccess(healthCheck, &wg)
 	}
+
+	doneChan := make(chan bool)
+
+	go func() {
+		wg.Wait()
+		doneChan <- true
+	}()
+
+	// send timeout signal eventually
+	timeoutChan := make(chan bool)
+	if timeout != nil {
+		go func() {
+			time.Sleep(time.Duration(*timeout) * time.Second)
+			timeoutChan <- true
+		}()
+	}
+
+	// run health checks until done or timeout reached. Failing health checks will add themself to the chan again
+	done := false
+	for !done{
+		select {
+		case <- doneChan:
+			fmt.Println("Health checks OK")
+			done = true
+		case <- timeoutChan:
+			fmt.Printf("Timeout: Gave up waiting for health checks to complete after %d seconds\n", *timeout)
+			return errors.New("timeout running health checks")
+		}
+	}
+
 	return nil
 }
 
-func runCheck(host nix.Host, healthCheck nix.HealthCheck) (err error) {
-	hostname := nix.GetHostname(host)
-	if healthCheck.Host != nil {
-		hostname = *healthCheck.Host
+func runCheckUntilSuccess(healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
+	for {
+		err := runCheck(healthCheck)
+		if err == nil {
+			fmt.Printf("\t* %s: OK\n", healthCheck.Description)
+			break
+		} else {
+			fmt.Printf("\t* %s: Failed (%s)\n", healthCheck.Description, err)
+			time.Sleep(time.Duration(healthCheck.Period) * time.Second)
+		}
 	}
+	wg.Done()
+}
 
+func runCheck(healthCheck nix.HealthCheck) (err error) {
 	transport := &http.Transport{}
 
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: healthCheck.InsecureSSL}
@@ -48,7 +80,7 @@ func runCheck(host nix.Host, healthCheck nix.HealthCheck) (err error) {
 		Transport: transport,
 	}
 
-	url := fmt.Sprintf("%s://%s:%d%s", healthCheck.Scheme, hostname, healthCheck.Port, healthCheck.Path)
+	url := fmt.Sprintf("%s://%s:%d%s", healthCheck.Scheme, *healthCheck.Host, healthCheck.Port, healthCheck.Path)
 	req, err := http.NewRequest("GET", url, nil)
 
 	for headerKey, headerValue := range healthCheck.Headers {

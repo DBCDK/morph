@@ -26,6 +26,7 @@ type HealthCheck struct {
 	Path        string
 	Port        int
 	Scheme      string
+	Period	    int
 	Timeout     int
 }
 

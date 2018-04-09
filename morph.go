@@ -31,8 +31,10 @@ var (
 	switchAction           = deploy.Arg("switch-action", "Either of build|push|dry-activate|test|switch|boot").Required().Enum("build", "push", "dry-activate", "test", "switch", "boot")
 	deployAskForSudoPasswd = deploy.Flag("passwd", "Whether to ask interactively for remote sudo password").Default("False").Bool()
 	deploySkipHealthChecks = deploy.Flag("skip-health-checks", "Whether to ask interactively for remote sudo password").Default("False").Bool()
+	deployHealthCheckTimeout     = deploy.Flag("health-check-timeout", "Seconds to wait for all health checks on a host to complete").Int()
 	healthCheck            = app.Command("check-health", "Run health checks")
 	healthCheckDeployment  = healthCheck.Arg("deployment", "File containing the deployment exec expression").Required().File()
+	healthCheckTimeout     = healthCheck.Flag("timeout", "Seconds to wait for all health checks on a host to complete").Int()
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
 	assetRoot, assetsErr = assets.Setup()
@@ -127,7 +129,7 @@ func doHealthCheck() {
 	}
 
 	for _, host := range hosts {
-		healthchecks.Perform(host)
+		healthchecks.Perform(host, healthCheckTimeout)
 	}
 }
 
@@ -266,7 +268,7 @@ func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPass
 		fmt.Println()
 
 		if !*deploySkipHealthChecks {
-			healthchecks.Perform(host)
+			healthchecks.Perform(host, deployHealthCheckTimeout)
 		}
 	}
 }
