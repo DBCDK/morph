@@ -11,10 +11,23 @@ import (
 )
 
 type Host struct {
+	HealthChecks []HealthCheck
 	Name         string
 	NixosRelease string
 	TargetHost   string
 	Secrets      map[string]Secret
+}
+
+type HealthCheck struct {
+	Description string
+	Headers     map[string]string
+	Host        *string
+	InsecureSSL bool
+	Path        string
+	Port        int
+	Scheme      string
+	Period      int
+	Timeout     int
 }
 
 type Secret struct {
