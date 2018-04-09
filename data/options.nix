@@ -74,10 +74,25 @@ vaultOptionsType = submodule ({ ... }: {
     };
 
   };
-  
+
 });
 
 healthCheckType = submodule ({ ... }: {
+  options = {
+    cmd = mkOption {
+      type = listOf cmdHealthCheckType;
+      default = [];
+      description = "List of command health checks";
+    };
+    http = mkOption {
+      type = listOf httpHealthCheckType;
+      default = [];
+      description = "List of HTTP health checks";
+    };
+  };
+});
+
+httpHealthCheckType = types.submodule ({ ... }: {
   options = {
     description = mkOption {
         type = str;
@@ -126,6 +141,30 @@ healthCheckType = submodule ({ ... }: {
   };
 });
 
+cmdHealthCheckType = types.submodule ({ ... }: {
+  options = {
+    description = mkOption {
+        type = str;
+        description = "Health check description";
+    };
+    cmd = mkOption {
+        type = nullOr (listOf str);
+        description = "Command to run as list";
+        default = null;
+    };
+    period = mkOption {
+      type = int;
+      description = "Seconds between checks";
+      default = 2;
+    };
+    timeout = mkOption {
+      type = int;
+      description = "Timeout in seconds";
+      default = 5;
+    };
+  };
+});
+
 in
 {
   options.deployment = {
@@ -145,13 +184,13 @@ in
     };
 
     healthChecks = mkOption {
-      type = listOf healthCheckType;
-      default = [];
+      type = healthCheckType;
       description = ''
-        List of health checks.
+        Health check configuration.
       '';
+      default = {};
     };
-    
+
     vault = mkOption {
       default = {};
       type = vaultOptionsType;

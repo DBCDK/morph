@@ -11,7 +11,7 @@ import (
 )
 
 type Host struct {
-	HealthChecks []HealthCheck
+	HealthChecks HealthChecks
 	Name         string
 	NixosRelease string
 	TargetHost   string
@@ -19,7 +19,19 @@ type Host struct {
 	Vault		 VaultOptions
 }
 
-type HealthCheck struct {
+type HealthChecks struct {
+	Http []HttpHealthCheck
+	Cmd []CmdHealthCheck
+}
+
+type CmdHealthCheck struct {
+	Description string
+	Cmd []string
+	Period      int
+	Timeout     int
+}
+
+type HttpHealthCheck struct {
 	Description string
 	Headers     map[string]string
 	Host        *string

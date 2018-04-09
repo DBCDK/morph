@@ -14,7 +14,7 @@ func Perform(host nix.Host, timeout int) (err error) {
 	fmt.Printf("Running healthchecks on %s:\n", nix.GetHostname(host))
 
 	wg := sync.WaitGroup{}
-	for _, healthCheck := range host.HealthChecks {
+	for _, healthCheck := range host.HealthChecks.Http {
 		// use the hosts hostname if the healthCheck host is not set
 		if healthCheck.Host == nil {
 			replacementHostname := nix.GetHostname(host)
@@ -56,7 +56,7 @@ func Perform(host nix.Host, timeout int) (err error) {
 	return nil
 }
 
-func runCheckUntilSuccess(healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
+func runCheckUntilSuccess(healthCheck nix.HttpHealthCheck, wg *sync.WaitGroup) {
 	for {
 		err := runCheck(healthCheck)
 		if err == nil {
@@ -70,7 +70,7 @@ func runCheckUntilSuccess(healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
 	wg.Done()
 }
 
-func runCheck(healthCheck nix.HealthCheck) (err error) {
+func runCheck(healthCheck nix.HttpHealthCheck) (err error) {
 	transport := &http.Transport{}
 
 	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: healthCheck.InsecureSSL}
