@@ -3,17 +3,13 @@ package vault
 import (
 	"git-platform.dbc.dk/platform/morph/nix"
 	vault "github.com/hashicorp/vault/api"
-	"os"
 )
 
 func newSecretID(client *vault.Client, host nix.Host) (*vault.Secret, error) {
 
 	r := client.NewRequest("POST", "/v1/auth/approle/role/"+host.TargetHost+"/secret-id")
 
-	if err := r.SetJSONBody(secretIDCreateRequest{Metadata: map[string]string{
-		"user": os.Getenv("USER"),
-		"host": os.Getenv("HOST"),
-	}}); err != nil {
+	if err := r.SetJSONBody(secretIDCreateRequest{}); err != nil {
 		return nil, err
 	}
 
