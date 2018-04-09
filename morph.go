@@ -9,6 +9,7 @@ import (
 	"git-platform.dbc.dk/platform/morph/nix"
 	"git-platform.dbc.dk/platform/morph/secrets"
 	"git-platform.dbc.dk/platform/morph/ssh"
+	"git-platform.dbc.dk/platform/morph/vault"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
@@ -42,6 +43,7 @@ var (
 
 var doPush = false
 var doAskPass = false
+var doVaultReKey = false
 var doUploadSecrets = false
 var doActivate = false
 
@@ -112,6 +114,11 @@ func doDeploy() {
 		fmt.Println()
 	}
 
+	//fixme This step is currently never activated
+	if doVaultReKey {
+		vaultReKey(hosts)
+	}
+
 	if doUploadSecrets {
 		uploadSecrets(hosts, sudoPasswd)
 	}
@@ -148,6 +155,42 @@ func validateEnvironment() (err error) {
 	}
 
 	return nil
+}
+
+func vaultReKey(hosts []nix.Host) {
+	vc, err := vault.Auth()
+	if err != nil {
+		printVaultWarning(err)
+		return
+	}
+
+	err = vault.Configure(vc)
+	if err != nil {
+		printVaultWarning(err)
+		return
+	}
+
+	for _, host := range hosts {
+		_, err := vault.CreateOrReKeyHostToken(vc, host) //fixme do something with token instead of discarding it
+		if err != nil {
+			printVaultWarning(err)
+			return
+		}
+
+		fmt.Printf("Vault: Secret token for host \"%s\" got rekeyed", host.TargetHost)
+		fmt.Println()
+	}
+}
+
+// Vault failures does not cause deployment to halt (for now), but it should make some noise in the terminal at least
+func printVaultWarning(err error) {
+	fmt.Fprintln(os.Stderr, "! ! ! ! ! ! ! ! ! ! ! !")
+	fmt.Fprintln(os.Stderr, "Interaction with Vault failed, this means that we won't be able to rekey host tokens")
+	fmt.Fprint(os.Stderr, "\t")
+	fmt.Fprintln(os.Stderr, err)
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "! ! ! ! ! ! ! ! ! ! ! !")
+	fmt.Fprintln(os.Stderr)
 }
 
 func getHosts(deployment *os.File) (hosts []nix.Host, err error) {

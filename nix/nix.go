@@ -16,6 +16,7 @@ type Host struct {
 	NixosRelease string
 	TargetHost   string
 	Secrets      map[string]Secret
+	Vault		 VaultOptions
 }
 
 type HealthCheck struct {
@@ -40,6 +41,12 @@ type Secret struct {
 type Owner struct {
 	Group string
 	User  string
+}
+
+type VaultOptions struct {
+	CIDRs []string
+	Policies []string
+	TTL string
 }
 
 func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err error) {
