@@ -42,12 +42,12 @@ func Perform(host nix.Host, timeout *int) (err error) {
 
 	// run health checks until done or timeout reached. Failing health checks will add themself to the chan again
 	done := false
-	for !done{
+	for !done {
 		select {
-		case <- doneChan:
+		case <-doneChan:
 			fmt.Println("Health checks OK")
 			done = true
-		case <- timeoutChan:
+		case <-timeoutChan:
 			fmt.Printf("Timeout: Gave up waiting for health checks to complete after %d seconds\n", *timeout)
 			return errors.New("timeout running health checks")
 		}
