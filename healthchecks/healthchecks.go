@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-func Perform(host nix.Host, timeout *int) (err error) {
+func Perform(host nix.Host, timeout int) (err error) {
 	fmt.Printf("Running healthchecks on %s:\n", nix.GetHostname(host))
 
 	wg := sync.WaitGroup{}
@@ -33,9 +33,9 @@ func Perform(host nix.Host, timeout *int) (err error) {
 
 	// send timeout signal eventually
 	timeoutChan := make(chan bool)
-	if timeout != nil {
+	if timeout > 0 {
 		go func() {
-			time.Sleep(time.Duration(*timeout) * time.Second)
+			time.Sleep(time.Duration(timeout) * time.Second)
 			timeoutChan <- true
 		}()
 	}
@@ -48,7 +48,7 @@ func Perform(host nix.Host, timeout *int) (err error) {
 			fmt.Println("Health checks OK")
 			done = true
 		case <-timeoutChan:
-			fmt.Printf("Timeout: Gave up waiting for health checks to complete after %d seconds\n", *timeout)
+			fmt.Printf("Timeout: Gave up waiting for health checks to complete after %d seconds\n", timeout)
 			return errors.New("timeout running health checks")
 		}
 	}
