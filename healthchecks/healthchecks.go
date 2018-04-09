@@ -1,11 +1,9 @@
 package healthchecks
 
 import (
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/nix"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -21,7 +19,7 @@ func Perform(host nix.Host, timeout int) (err error) {
 			healthCheck.Host = &replacementHostname
 		}
 		wg.Add(1)
-		go runCheckUntilSuccess(healthCheck, &wg)
+		go httpRunCheckUntilSuccess(healthCheck, &wg)
 	}
 
 	doneChan := make(chan bool)
@@ -56,48 +54,16 @@ func Perform(host nix.Host, timeout int) (err error) {
 	return nil
 }
 
-func runCheckUntilSuccess(healthCheck nix.HttpHealthCheck, wg *sync.WaitGroup) {
+func httpRunCheckUntilSuccess(healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
 	for {
-		err := runCheck(healthCheck)
+		err := healthCheck.Run()
 		if err == nil {
-			fmt.Printf("\t* %s: OK\n", healthCheck.Description)
+			fmt.Printf("\t* %s: OK\n", healthCheck.GetDescription())
 			break
 		} else {
-			fmt.Printf("\t* %s: Failed (%s)\n", healthCheck.Description, err)
-			time.Sleep(time.Duration(healthCheck.Period) * time.Second)
+			fmt.Printf("\t* %s: Failed (%s)\n", healthCheck.GetDescription(), err)
+			time.Sleep(time.Duration(healthCheck.GetPeriod()) * time.Second)
 		}
 	}
 	wg.Done()
-}
-
-func runCheck(healthCheck nix.HttpHealthCheck) (err error) {
-	transport := &http.Transport{}
-
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: healthCheck.InsecureSSL}
-
-	client := &http.Client{
-		Timeout:   time.Duration(healthCheck.Timeout) * time.Second,
-		Transport: transport,
-	}
-
-	url := fmt.Sprintf("%s://%s:%d%s", healthCheck.Scheme, *healthCheck.Host, healthCheck.Port, healthCheck.Path)
-	req, err := http.NewRequest("GET", url, nil)
-
-	for headerKey, headerValue := range healthCheck.Headers {
-		req.Header.Add(headerKey, headerValue)
-	}
-
-	resp, err := client.Get(url)
-
-	if err != nil {
-		return err
-	}
-
-	resp.Body.Close()
-
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Got non 2xx status code (%s)", resp.Status))
-	}
 }
