@@ -268,7 +268,12 @@ func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPass
 		fmt.Println()
 
 		if !*deploySkipHealthChecks {
-			healthchecks.Perform(host, deployHealthCheckTimeout)
+			err = healthchecks.Perform(host, deployHealthCheckTimeout)
+			if err != nil {
+				fmt.Println()
+				fmt.Println("Not deploying to additional hosts, since a host health check failed.")
+				os.Exit(1)
+			}
 		}
 	}
 }
