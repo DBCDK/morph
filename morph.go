@@ -140,6 +140,8 @@ func doDeploy() {
 				os.Exit(1)
 			}
 		}
+
+		fmt.Println("Done:", nix.GetHostname(host))
 	}
 }
 
