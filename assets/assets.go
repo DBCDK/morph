@@ -84,7 +84,7 @@ func dataEvalMachinesNix() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/eval-machines.nix", size: 3515, mode: os.FileMode(420), modTime: time.Unix(1523283164, 0)}
+	info := bindataFileInfo{name: "data/eval-machines.nix", size: 3515, mode: os.FileMode(420), modTime: time.Unix(1523347553, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -104,7 +104,7 @@ func dataOptionsNix() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/options.nix", size: 4297, mode: os.FileMode(420), modTime: time.Unix(1523283620, 0)}
+	info := bindataFileInfo{name: "data/options.nix", size: 4297, mode: os.FileMode(420), modTime: time.Unix(1523347553, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
