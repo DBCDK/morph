@@ -92,7 +92,7 @@ func CreateOrReKeyHostToken(vc *vault.Client, host nix.Host) (*TokenCredentials,
 
 	return &TokenCredentials{
 		Accessor: secret.Auth.Accessor,
-		Token: secret.Auth.ClientToken }, nil
+		Token:    secret.Auth.ClientToken}, nil
 }
 
 type AppRoleCredentials struct {

@@ -1,9 +1,9 @@
 package main
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
-	hashicorpvault "github.com/hashicorp/vault/api"
 	"git-platform.dbc.dk/platform/morph/assets"
 	"git-platform.dbc.dk/platform/morph/filter"
 	"git-platform.dbc.dk/platform/morph/healthchecks"
@@ -11,6 +11,7 @@ import (
 	"git-platform.dbc.dk/platform/morph/secrets"
 	"git-platform.dbc.dk/platform/morph/ssh"
 	"git-platform.dbc.dk/platform/morph/vault"
+	hashicorpvault "github.com/hashicorp/vault/api"
 	"golang.org/x/crypto/ssh/terminal"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"io/ioutil"
@@ -19,7 +20,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"bufio"
 )
 
 var (
@@ -234,10 +234,10 @@ func vaultReKey(vc *hashicorpvault.Client, hosts []nix.Host) *nix.Secret {
 	fmt.Printf("Vault: Secret token for host \"%s\" got rekeyed", host.TargetHost)
 	fmt.Println()
 
-	return &nix.Secret {
-		Source: tempFile,
+	return &nix.Secret{
+		Source:      tempFile,
 		Destination: host.Vault.DestinationFile.Path,
-		Owner: host.Vault.DestinationFile.Owner,
+		Owner:       host.Vault.DestinationFile.Owner,
 		Permissions: host.Vault.DestinationFile.Permissions}
 }
 
@@ -274,7 +274,7 @@ func getHosts(deployment *os.File) (hosts []nix.Host, err error) {
 
 	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Printf("\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks.Cmd) + len(host.HealthChecks.Http))
+		fmt.Printf("\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
 	}
 	fmt.Println()
 
