@@ -73,6 +73,32 @@ vaultOptionsType = submodule ({ ... }: {
       description = "Vault access policies to apply for this host.";
     };
 
+    destinationFile = mkOption {
+      type = submodule {
+
+        options = {
+          path = mkOption {
+            type = str;
+            default = "/var/secrets/vault.env";
+            description = "Full path (including filename) of the remote env-file which will hold Vault credentials.";
+          };
+
+          owner = mkOption {
+            type = ownerOptionsType;
+            default = { user = "root"; group = "root"; };
+            description = "User that will own the file containing Vault credentials on the remote host.";
+          };
+
+          permissions = mkOption {
+            type = str;
+            default = "0400";
+            description = "Permissions expressed as octal.";
+          };
+        };
+      };
+      
+      default = {};
+    };
   };
 
 });

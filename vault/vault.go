@@ -2,22 +2,14 @@ package vault
 
 import (
 	"crypto/tls"
-	"errors"
 	"git-platform.dbc.dk/platform/morph/nix"
 	vault "github.com/hashicorp/vault/api"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
 
-func Auth() (vc *vault.Client, err error) {
-
-	addr := os.Getenv("VAULT_ADDR")
-	rootToken := os.Getenv("VAULT_TOKEN")
-	if len(addr) < 1 || len(rootToken) < 1 {
-		return nil, errors.New("VAULT_ADDR and VAULT_TOKEN must be set in environment")
-	}
+func Auth(addr string, rootToken string) (vc *vault.Client, err error) {
 
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
@@ -46,15 +38,15 @@ func Auth() (vc *vault.Client, err error) {
 */
 func Configure(vc *vault.Client) error {
 
-	auths, _ := vc.Sys().ListAuth()
+	//auths, _ := vc.Sys().ListAuth()
 	audits, _ := vc.Sys().ListAudit()
 
-	authAppRole := false
-	for a := range auths {
-		if a == "approle/" {
-			authAppRole = true
-		}
-	}
+	//authAppRole := false
+	//for a := range auths {
+	//	if a == "approle/" {
+	//		authAppRole = true
+	//	}
+	//}
 
 	auditSysLog := false
 	for a := range audits {
@@ -63,7 +55,7 @@ func Configure(vc *vault.Client) error {
 		}
 	}
 
-	if !authAppRole {
+	if false { // disable app-role auth for now
 		err := vc.Sys().EnableAuthWithOptions("approle", &vault.EnableAuthOptions{
 			Type:        "approle",
 			Description: "Enable auth approle",
@@ -86,24 +78,29 @@ func Configure(vc *vault.Client) error {
 	return nil
 }
 
-func CreateOrReKeyHostToken(vc *vault.Client, host nix.Host) (*AppRoleCredentials, error) {
+func CreateOrReKeyHostToken(vc *vault.Client, host nix.Host) (*TokenCredentials, error) {
 
-	role, err := syncAppRole(vc, host)
+	err := syncTokenRole(vc, host)
 	if err != nil {
 		return nil, err
 	}
 
-	secret, err := newSecretID(vc, host)
+	secret, err := newToken(vc, host)
 	if err != nil {
 		return nil, err
 	}
 
-	return &AppRoleCredentials{
-		roleID:   role.Data["role_id"].(string),
-		secretID: secret.Data["secret_id"].(string)}, nil
+	return &TokenCredentials{
+		Accessor: secret.Auth.Accessor,
+		Token: secret.Auth.ClientToken }, nil
 }
 
 type AppRoleCredentials struct {
-	roleID   string
-	secretID string
+	RoleID   string
+	SecretID string
+}
+
+type TokenCredentials struct {
+	Accessor string
+	Token    string
 }

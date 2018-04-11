@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	hashicorpvault "github.com/hashicorp/vault/api"
 	"git-platform.dbc.dk/platform/morph/assets"
 	"git-platform.dbc.dk/platform/morph/filter"
 	"git-platform.dbc.dk/platform/morph/healthchecks"
@@ -18,6 +19,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"bufio"
 )
 
 var (
@@ -43,7 +45,6 @@ var (
 
 var doPush = false
 var doAskPass = false
-var doVaultReKey = false
 var doUploadSecrets = false
 var doActivate = false
 
@@ -109,6 +110,18 @@ func doDeploy() {
 		fmt.Println()
 	}
 
+	// Activate vault re-key only if VAULT env vars are set
+	addr := os.Getenv("VAULT_ADDR")
+	rootToken := os.Getenv("VAULT_TOKEN")
+
+	var vc *hashicorpvault.Client = nil
+	if len(addr) > 1 && len(rootToken) > 1 {
+		vc, _ = vaultInit(addr, rootToken)
+	} else {
+		fmt.Println("Vault: Please set VAULT_ADDR and VAULT_TOKEN in environment to activate vault re-keying.")
+		fmt.Println()
+	}
+
 	for _, host := range hosts {
 		singleHostInList := []nix.Host{host}
 
@@ -117,11 +130,12 @@ func doDeploy() {
 		}
 		fmt.Println()
 
-
-
-		//fixme This step is currently never activated
-		if doVaultReKey {
-			vaultReKey(singleHostInList)
+		if vc != nil {
+			secret := vaultReKey(vc, singleHostInList)
+			if secret != nil {
+				secrets.UploadSecret(host, sudoPasswd, *secret, "./")
+				os.Remove(secret.Source)
+			}
 		}
 
 		if doUploadSecrets {
@@ -173,29 +187,58 @@ func validateEnvironment() (err error) {
 	return nil
 }
 
-func vaultReKey(hosts []nix.Host) {
-	vc, err := vault.Auth()
+func vaultInit(addr string, rootToken string) (*hashicorpvault.Client, error) {
+
+	vc, err := vault.Auth(addr, rootToken)
 	if err != nil {
 		printVaultWarning(err)
-		return
+		return nil, err
 	}
 
 	err = vault.Configure(vc)
 	if err != nil {
 		printVaultWarning(err)
-		return
+		return nil, err
 	}
 
-	for _, host := range hosts {
-		_, err := vault.CreateOrReKeyHostToken(vc, host) //fixme do something with token instead of discarding it
-		if err != nil {
-			printVaultWarning(err)
-			return
-		}
+	return vc, nil
+}
 
-		fmt.Printf("Vault: Secret token for host \"%s\" got rekeyed", host.TargetHost)
-		fmt.Println()
+func vaultReKey(vc *hashicorpvault.Client, hosts []nix.Host) *nix.Secret {
+
+	host := hosts[0]
+
+	creds, err := vault.CreateOrReKeyHostToken(vc, host)
+	if err != nil {
+		printVaultWarning(err)
+		return nil
 	}
+
+	tempFile := tempDir + "/vault.env"
+
+	f, err := os.OpenFile(tempFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0400)
+	defer f.Close()
+
+	if err != nil {
+		printVaultWarning(err)
+		return nil
+	}
+	writer := bufio.NewWriter(f)
+
+	fmt.Fprintf(writer, "VAULT_ACCESSOR=%s\n", creds.Accessor)
+	fmt.Fprintf(writer, "VAULT_TOKEN=%s\n", creds.Token)
+
+	writer.Flush()
+	f.Sync()
+
+	fmt.Printf("Vault: Secret token for host \"%s\" got rekeyed", host.TargetHost)
+	fmt.Println()
+
+	return &nix.Secret {
+		Source: tempFile,
+		Destination: host.Vault.DestinationFile.Path,
+		Owner: host.Vault.DestinationFile.Owner,
+		Permissions: host.Vault.DestinationFile.Permissions}
 }
 
 // Vault failures does not cause deployment to halt (for now), but it should make some noise in the terminal at least

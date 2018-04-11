@@ -62,6 +62,13 @@ type VaultOptions struct {
 	CIDRs []string
 	Policies []string
 	TTL string
+	DestinationFile VaultDestinationFile
+}
+
+type VaultDestinationFile struct {
+	Path string
+	Owner Owner
+	Permissions string
 }
 
 type HealthCheck interface {
