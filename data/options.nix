@@ -53,6 +53,8 @@ vaultOptionsType = submodule ({ ... }: {
 
   options = {
 
+    enable = mkEnableOption "Vault features";
+
     ttl = mkOption {
       type = str;
       default = "43200m"; # 30 days

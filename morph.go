@@ -110,18 +110,7 @@ func doDeploy() {
 		fmt.Println()
 	}
 
-	// Activate vault re-key only if VAULT env vars are set
-	addr := os.Getenv("VAULT_ADDR")
-	rootToken := os.Getenv("VAULT_TOKEN")
-
 	var vc *hashicorpvault.Client = nil
-	if len(addr) > 1 && len(rootToken) > 1 {
-		vc, _ = vaultInit(addr, rootToken)
-	} else {
-		fmt.Println("Vault: Please set VAULT_ADDR and VAULT_TOKEN in environment to activate vault re-keying.")
-		fmt.Println()
-	}
-
 	for _, host := range hosts {
 		singleHostInList := []nix.Host{host}
 
@@ -130,12 +119,20 @@ func doDeploy() {
 		}
 		fmt.Println()
 
-		if vc != nil {
-			secret := vaultReKey(vc, singleHostInList)
-			if secret != nil {
-				secrets.UploadSecret(host, sudoPasswd, *secret, "./")
-				os.Remove(secret.Source)
+		if host.Vault.Enable {
+
+			if vc == nil {
+				vc = vaultInit()
 			}
+
+			if vc != nil {
+				secret := vaultReKey(vc, singleHostInList)
+				if secret != nil {
+					secrets.UploadSecret(host, sudoPasswd, *secret, "./")
+					os.Remove(secret.Source)
+				}
+			}
+
 		}
 
 		if doUploadSecrets {
@@ -187,21 +184,32 @@ func validateEnvironment() (err error) {
 	return nil
 }
 
-func vaultInit(addr string, rootToken string) (*hashicorpvault.Client, error) {
+func vaultInit() (*hashicorpvault.Client) {
 
-	vc, err := vault.Auth(addr, rootToken)
-	if err != nil {
-		printVaultWarning(err)
-		return nil, err
+	addr := os.Getenv("VAULT_ADDR")
+	rootToken := os.Getenv("VAULT_TOKEN")
+
+	if len(addr) > 1 && len(rootToken) > 1 {
+
+		vc, err := vault.Auth(addr, rootToken)
+		if err != nil {
+			printVaultWarning(err)
+			return nil
+		}
+
+		err = vault.Configure(vc)
+		if err != nil {
+			printVaultWarning(err)
+			return nil
+		}
+
+		return vc
+
+	} else {
+		fmt.Fprintln(os.Stderr, "Vault: Please set VAULT_ADDR and VAULT_TOKEN in environment.")
+		fmt.Fprintln(os.Stderr)
+		return nil
 	}
-
-	err = vault.Configure(vc)
-	if err != nil {
-		printVaultWarning(err)
-		return nil, err
-	}
-
-	return vc, nil
 }
 
 func vaultReKey(vc *hashicorpvault.Client, hosts []nix.Host) *nix.Secret {
