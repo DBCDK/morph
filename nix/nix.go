@@ -19,17 +19,17 @@ type Host struct {
 	NixosRelease string
 	TargetHost   string
 	Secrets      map[string]Secret
-	Vault		 VaultOptions
+	Vault        VaultOptions
 }
 
 type HealthChecks struct {
 	Http []HttpHealthCheck
-	Cmd []CmdHealthCheck
+	Cmd  []CmdHealthCheck
 }
 
 type CmdHealthCheck struct {
 	Description string
-	Cmd []string
+	Cmd         []string
 	Period      int
 	Timeout     int
 }
@@ -59,9 +59,17 @@ type Owner struct {
 }
 
 type VaultOptions struct {
-	CIDRs []string
-	Policies []string
-	TTL string
+	CIDRs           []string
+	Policies        []string
+	TTL             string
+	DestinationFile VaultDestinationFile
+	Enable          bool
+}
+
+type VaultDestinationFile struct {
+	Path        string
+	Owner       Owner
+	Permissions string
 }
 
 type HealthCheck interface {

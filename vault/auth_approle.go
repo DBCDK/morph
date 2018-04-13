@@ -22,11 +22,11 @@ func newSecretID(client *vault.Client, host nix.Host) (*vault.Secret, error) {
 	return vault.ParseSecret(resp.Body)
 }
 
-func syncAppRole(client *vault.Client, host nix.Host) error {
+func syncAppRole(client *vault.Client, host nix.Host) (*vault.Secret, error) {
 
-	r := client.NewRequest("POST", "/v1/auth/approle/role/"+host.TargetHost)
+	req1 := client.NewRequest("POST", "/v1/auth/approle/role/"+host.TargetHost)
 
-	if err := r.SetJSONBody(appRoleCreateRequest{
+	if err := req1.SetJSONBody(appRoleCreateRequest{
 
 		BindSecretID:    true,
 		BoundCIDRList:   host.Vault.CIDRs,
@@ -34,15 +34,24 @@ func syncAppRole(client *vault.Client, host nix.Host) error {
 		SecretIDNumUses: 0,
 		SecretIDTTL:     host.Vault.TTL,
 	}); err != nil {
-		return err
+		return nil, err
 	}
 
-	_, err := client.RawRequest(r)
+	_, err := client.RawRequest(req1)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	// Annoyingly, Vault doesn't give us the role-id in the response from app-role create/update
+	// we have to retrieve it with a subsequent GET-request
+	req2 := client.NewRequest("GET", "/v1/auth/approle/role/"+host.TargetHost+"/role-id")
+	resp, err := client.RawRequest(req2)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return vault.ParseSecret(resp.Body)
 }
 
 type secretIDCreateRequest struct {
