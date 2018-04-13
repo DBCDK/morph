@@ -184,7 +184,7 @@ func validateEnvironment() (err error) {
 	return nil
 }
 
-func vaultInit() (*hashicorpvault.Client) {
+func vaultInit() *hashicorpvault.Client {
 
 	addr := os.Getenv("VAULT_ADDR")
 	rootToken := os.Getenv("VAULT_TOKEN")

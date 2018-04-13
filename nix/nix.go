@@ -63,7 +63,7 @@ type VaultOptions struct {
 	Policies        []string
 	TTL             string
 	DestinationFile VaultDestinationFile
-	Enable			bool
+	Enable          bool
 }
 
 type VaultDestinationFile struct {
