@@ -12,3 +12,6 @@
 # go2nix outfiles
 /default.nix
 /deps.nix
+
+# binary assets
+/assets/assets.go
