@@ -46,6 +46,21 @@ func writeSudoPassword(cmd *exec.Cmd, sudoPasswd string) (err error) {
 }
 
 func ActivateConfiguration(host nix.Host, configuration string, action string, sudoPasswd string) error {
+
+	if action == "switch" || action == "boot" {
+		cmd, err := sshSudoCmd(host, sudoPasswd, "nix-env", "--profile", "/nix/var/nix/profiles/system", "--set", configuration)
+		if err != nil {
+			return err
+		}
+
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
+	}
+
 	cmd, err := sshSudoCmd(host, sudoPasswd, filepath.Join(configuration, "bin/switch-to-configuration"), action)
 	if err != nil {
 		return err
