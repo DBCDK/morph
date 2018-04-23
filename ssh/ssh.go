@@ -52,7 +52,10 @@ func ActivateConfiguration(host nix.Host, configuration string, action string, s
 		if err != nil {
 			return err
 		}
-		cmd.Run()
+
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
 		if err != nil {
 			return err
 		}
