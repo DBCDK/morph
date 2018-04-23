@@ -10,7 +10,7 @@ Run `make dependencies` to (re-)install pinned dependencies in vendor-dir
 Gopkg.toml specifies at which branch/tag each dependency is requested to be at.
 Gopkg.lock specifies a concrete revision each dependency is pinned at.
 
-If you want to bump dependencies to newest commit, run `dep ensure -update`, this will change Gopkg.lock, which has to be git-committed.
+If you want to bump dependencies to newest commit, run `dep ensure -v -update`, this will change Gopkg.lock, which has to be git-committed.
 
 If you make larger changes to the code base, you can delete both Gopkg.toml and Gopkg.lock and run `dep init` followed by `dep ensure` to create a fresh set of dependency tracking files. **don't forget to test** afterwards.
 
