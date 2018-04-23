@@ -8,11 +8,12 @@ in
     name = "morph-build-env";
 
     buildInputs = with pkgs; [
-      go2nix_v2
-      go-bindata
-      nix-prefetch-git
-      dep
       bashInteractive
+      dep
+      gnumake
+      go-bindata
+      go2nix_v2
+      nix-prefetch-git
     ];
 
     shellHook = ''
