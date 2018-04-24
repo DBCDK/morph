@@ -5,26 +5,24 @@ All commands mentioned below is available in the nix-shell, if you run `nix-shel
 
 ## Go dependencies
 
-Run `dep ensure -vendor-only` to (re-)install pinned dependencies in vendor-dir
+Run `make dependencies` to (re-)install pinned dependencies in vendor-dir
 
 Gopkg.toml specifies at which branch/tag each dependency is requested to be at.
 Gopkg.lock specifies a concrete revision each dependency is pinned at.
 
-If you want to bump dependencies to newest commit, run `dep ensure -update`, this will change Gopkg.lock, which has to be git-committed.
+If you want to bump dependencies to newest commit, run `dep ensure -v -update`, this will change Gopkg.lock, which has to be git-committed.
 
 If you make larger changes to the code base, you can delete both Gopkg.toml and Gopkg.lock and run `dep init` followed by `dep ensure` to create a fresh set of dependency tracking files. **don't forget to test** afterwards.
 
 ## Assets
 
-Run `go-bindata -pkg assets -o assets/assets.go data/` after updating files from data/
+Run `make assets` after updating files from data/
 
 ## Building the project with pinned dependencies
 
 $ `nix-shell`
 
-$ `dep ensure -vendor-only`
-
-$ `go build`
+$ `make`
 
 *Your GOPATH must be set in your local environment, however /vendor is used exclusively for dependency resolution.*
 
@@ -33,8 +31,6 @@ $ `go build`
 
 $ `nix-shell`
 
-$ `dep ensure -vendor-only`
-
-$ `go2nix save`
+$ `make derivation`
 
 *Produces "default.nix" and "deps.nix" which can be copied to the deployments repo*
