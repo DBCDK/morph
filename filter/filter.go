@@ -19,6 +19,9 @@ func MatchHosts(allHosts []nix.Host, pattern string) (hosts []nix.Host, err erro
 
 func FilterHosts(allHosts []nix.Host, skip int, every int, limit int) (hosts []nix.Host) {
 	// skip first $skip hosts
+	if skip >= len(allHosts) {
+		return hosts
+	}
 	for index, host := range allHosts[skip:] {
 		// select every $every hosts
 		if index%every == 0 {
