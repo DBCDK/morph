@@ -79,6 +79,9 @@ func doDeploy() {
 		switch *switchAction {
 		case "push":
 			doPush = true
+			fallthrough
+		case "build":
+			*deploySkipHealthChecks = true
 		case "dry-activate":
 			doPush = true
 			// fixme (in ssh/ssh.go) - should be possible to dry-activate without sudo
