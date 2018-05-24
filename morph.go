@@ -100,7 +100,12 @@ func doDeploy() {
 		}
 	}
 
-	hosts, resultPath := build()
+	hosts, resultPath, err := build()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	fmt.Println()
 
 	sudoPasswd := ""
@@ -289,7 +294,7 @@ func getHosts(deployment *os.File) (hosts []nix.Host, err error) {
 	return filteredHosts, nil
 }
 
-func build() ([]nix.Host, string) {
+func build() (hosts []nix.Host, resultPath string, err error) {
 	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
 
 	deploymentPath, err := filepath.Abs((*deployDeployment).Name())
@@ -297,18 +302,21 @@ func build() ([]nix.Host, string) {
 		panic(err)
 	}
 
-	hosts, err := getHosts(*deployDeployment)
+	hosts, err = getHosts(*deployDeployment)
 	if err != nil {
 		panic(err)
 	}
+	if len(hosts) == 0 {
+		return hosts, resultPath, errors.New("No hosts selected")
+	}
 
-	resultPath, err := nix.BuildMachines(evalMachinesPath, deploymentPath, hosts)
+	resultPath, err = nix.BuildMachines(evalMachinesPath, deploymentPath, hosts)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("nix result path: " + resultPath)
-	return hosts, resultPath
+	return hosts, resultPath, nil
 }
 
 func askForSudoPassword() string {
