@@ -17,6 +17,12 @@
   revision = "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a"
 
 [[projects]]
+  name = "github.com/fatih/structs"
+  packages = ["."]
+  revision = "a720dfa8df582c51dee1b36feabb906bde1588bd"
+  version = "v1.0"
+
+[[projects]]
   name = "github.com/gobwas/glob"
   packages = [
     ".",
@@ -35,13 +41,13 @@
   branch = "master"
   name = "github.com/golang/snappy"
   packages = ["."]
-  revision = "2e65f85255dbc3072edf28d6b5b8efc472979f5a"
+  revision = "553a641470496b2327abcac10b36396bd98e45c9"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/errwrap"
   packages = ["."]
-  revision = "d6c0cd88035724dd42e0f335ae30161c20575ecc"
+  revision = "7554cd9344cec97297fa6649b055a8c98c2a1e55"
 
 [[projects]]
   branch = "master"
@@ -53,25 +59,13 @@
   branch = "master"
   name = "github.com/hashicorp/go-multierror"
   packages = ["."]
-  revision = "3d5d8f294aa03d8e98859feac328afbdf1ae0703"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/hashicorp/go-retryablehttp"
-  packages = ["."]
-  revision = "e651d75abec6fbd4f2c09508f72ae7af8a8b7171"
+  revision = "b7773ae218740a7be65057fc60b366a49b538a44"
 
 [[projects]]
   branch = "master"
   name = "github.com/hashicorp/go-rootcerts"
   packages = ["."]
   revision = "6bb64b370b90e7ef1fa532be9e591a81c3493e00"
-
-[[projects]]
-  branch = "master"
-  name = "github.com/hashicorp/go-sockaddr"
-  packages = ["."]
-  revision = "6d291a969b86c4b633730bfc6b8b9d64c3aafed9"
 
 [[projects]]
   branch = "master"
@@ -94,25 +88,24 @@
   packages = [
     "api",
     "helper/compressutil",
-    "helper/hclutil",
     "helper/jsonutil",
     "helper/parseutil",
     "helper/strutil"
   ]
-  revision = "e21712a687889de1125e0a12a980420b1a4f72d3"
-  version = "v0.10.4"
+  revision = "7e1fbde40afee241f81ef08700e7987d86fc7242"
+  version = "v0.9.6"
 
 [[projects]]
   branch = "master"
   name = "github.com/mitchellh/go-homedir"
   packages = ["."]
-  revision = "58046073cbffe2f25d425fe1331102f55cf719de"
+  revision = "b8bc1bf767474819792c23f32d8286a45736f1c6"
 
 [[projects]]
   branch = "master"
   name = "github.com/mitchellh/mapstructure"
   packages = ["."]
-  revision = "f15292f7a699fcc1a38a80977f80a046874ba8ac"
+  revision = "00c29f56e2386353d58c599509e8dc3801b0d716"
 
 [[projects]]
   name = "github.com/ryanuber/go-glob"
@@ -122,21 +115,26 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/sethgrid/pester"
+  packages = ["."]
+  revision = "ed9870dad3170c0b25ab9b11830cc57c3a7798fb"
+
+[[projects]]
+  branch = "master"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
-  revision = "de0752318171da717af4ce24d0a2e8626afaeb11"
+  revision = "beb2a9779c3b677077c41673505f150149fce895"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/net"
   packages = [
-    "context",
-    "http/httpguts",
     "http2",
     "http2/hpack",
-    "idna"
+    "idna",
+    "lex/httplex"
   ]
-  revision = "c39426892332e1bb5ec0a434a079bf82f5d30c54"
+  revision = "61147c48b25b599e5b561d2e9c4f3e1ef489ca41"
 
 [[projects]]
   branch = "master"
@@ -145,7 +143,7 @@
     "unix",
     "windows"
   ]
-  revision = "14742f9018cd6651ec7364dc6ee08af0baaa1031"
+  revision = "3b87a42e500a6dc65dae1a55d0b641295971163e"
 
 [[projects]]
   name = "golang.org/x/text"
@@ -167,12 +165,6 @@
   ]
   revision = "f21a4dfb5e38f5895301dc265a8def02365cc3d0"
   version = "v0.3.0"
-
-[[projects]]
-  branch = "master"
-  name = "golang.org/x/time"
-  packages = ["rate"]
-  revision = "fbb02b2291d28baffd63558aa44b4b56f178d650"
 
 [[projects]]
   name = "gopkg.in/alecthomas/kingpin.v2"

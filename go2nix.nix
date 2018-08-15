@@ -3,16 +3,17 @@
 with import <nixpkgs> {};
 
 buildGoPackage rec {
-  name = "go2nix-${version}";
-  version = "v1.2.1";
+  name = "go2nix-unstable-${version}";
+  version = "0.2-dev";
 
   goPackagePath = "github.com/kamilchm/go2nix";
+  subPackages = [ "cmd/go2nix" ];
 
   src = fetchFromGitHub {
     owner = "kamilchm";
     repo = "go2nix";
-    rev = version;
-    sha256 = "0fr9aa50yvchfhv6h6zqblx8ynxk41i2hmv87b344zr2rz6rms72";
+    rev = "6cd52450c74f013a7e7c284526b3983dd918b070";
+    sha256 = "1bazkn7f5pydcqsvqg8yfx56h4162i2sya8q835ssc8bbp5y8as6";
   };
 
   goDeps = ./go2nix-deps.nix;
