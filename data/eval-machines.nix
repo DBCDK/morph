@@ -57,7 +57,7 @@ rec {
       flip mapAttrs nodes (n: v': let v = scrubOptionValue v'; in
         { inherit (v.config.deployment) targetHost secrets healthChecks vault;
           name = n;
-          nixosRelease = v.config.system.nixosRelease or (removeSuffix v.config.system.nixosVersionSuffix v.config.system.nixosVersion);
+          nixosRelease = v.config.system.nixos.release or (removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
         }
       );
 
