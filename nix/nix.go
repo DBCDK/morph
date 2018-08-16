@@ -19,7 +19,6 @@ type Host struct {
 	NixosRelease string
 	TargetHost   string
 	Secrets      map[string]Secret
-	Vault        VaultOptions
 }
 
 type HealthChecks struct {
@@ -56,20 +55,6 @@ type Secret struct {
 type Owner struct {
 	Group string
 	User  string
-}
-
-type VaultOptions struct {
-	CIDRs           []string
-	Policies        []string
-	TTL             string
-	DestinationFile VaultDestinationFile
-	Enable          bool
-}
-
-type VaultDestinationFile struct {
-	Path        string
-	Owner       Owner
-	Permissions string
 }
 
 type HealthCheck interface {
