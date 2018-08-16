@@ -1,7 +1,7 @@
 { pkgs ? (import <nixpkgs> {}) }:
 
 let
-  go2nix_v2 = pkgs.callPackage ./go2nix.nix {};
+  dep2nix = pkgs.callPackage ./nix-packaging/dep2nix {};
 in
   # Change to mkShell once that hits stable!
   pkgs.stdenv.mkDerivation {
@@ -10,9 +10,10 @@ in
     buildInputs = with pkgs; [
       bashInteractive
       dep
+      dep2nix
+      git
       gnumake
       go-bindata
-      go2nix_v2
       nix-prefetch-git
     ];
 
