@@ -33,4 +33,4 @@ $ `nix-shell`
 
 $ `make derivation`
 
-*Produces "default.nix" and "deps.nix" which can be copied to the deployments repo*
+*Produces "default.nix" and "deps.nix" (stored in nix-packaging/out) which can be copied to the deployments repo*

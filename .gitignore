@@ -9,9 +9,8 @@
 # vendor cache dir
 /vendor
 
-# go2nix outfiles
-/default.nix
-/deps.nix
-
 # binary assets
 /assets/assets.go
+
+# generated nix package
+/nix-packaging/out/*
