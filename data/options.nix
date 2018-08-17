@@ -49,62 +49,6 @@ keyOptionsType = submodule ({ ... }: {
   };
 });
 
-vaultOptionsType = submodule ({ ... }: {
-
-  options = {
-
-    enable = mkEnableOption "Vault features";
-
-    ttl = mkOption {
-      type = str;
-      default = "43200m"; # 30 days
-      description = "TTL for secret tokens for this host.";
-    };
-
-    cidrs = mkOption {
-      type = listOf str;
-      default = [];
-      example = ["172.20.11.12/32"];
-      description = "IPv4 CIDR block that can login using secret tokens for this host.";
-    };
-
-    policies = mkOption {
-      type = listOf str;
-      default = ["default"];
-      example = ["k8s" "control-plane"];
-      description = "Vault access policies to apply for this host.";
-    };
-
-    destinationFile = mkOption {
-      type = submodule {
-
-        options = {
-          path = mkOption {
-            type = str;
-            default = "/var/secrets/vault.env";
-            description = "Full path (including filename) of the remote env-file which will hold Vault credentials.";
-          };
-
-          owner = mkOption {
-            type = ownerOptionsType;
-            default = { user = "root"; group = "root"; };
-            description = "User that will own the file containing Vault credentials on the remote host.";
-          };
-
-          permissions = mkOption {
-            type = str;
-            default = "0400";
-            description = "Permissions expressed as octal.";
-          };
-        };
-      };
-      
-      default = {};
-    };
-  };
-
-});
-
 healthCheckType = submodule ({ ... }: {
   options = {
     cmd = mkOption {
@@ -217,14 +161,6 @@ in
         Health check configuration.
       '';
       default = {};
-    };
-
-    vault = mkOption {
-      default = {};
-      type = vaultOptionsType;
-      description = ''
-        Hashicorp Vault options for configuring approle tokens for hosts.
-      '';
     };
   };
 }
