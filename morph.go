@@ -10,7 +10,7 @@ import (
 	"git-platform.dbc.dk/platform/morph/secrets"
 	"git-platform.dbc.dk/platform/morph/ssh"
 	"golang.org/x/crypto/ssh/terminal"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/DBCDK/kingpin"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -18,6 +18,8 @@ import (
 	"strings"
 	"syscall"
 )
+
+var switchActions = []string{ "build", "push", "dry-activate", "test", "switch", "boot" }
 
 var (
 	app                      = kingpin.New("morph", "NixOS host manager").Version("1.0")
@@ -27,13 +29,13 @@ var (
 	selectSkip               = app.Flag("skip", "Skip first n hosts").Default("0").Int()
 	selectLimit              = app.Flag("limit", "Select at most n hosts").Int()
 	deploy                   = app.Command("deploy", "Deploy machines")
-	deployDeployment         = deploy.Arg("deployment", "File containing the deployment exec expression").Required().File()
-	switchAction             = deploy.Arg("switch-action", "Either of build|push|dry-activate|test|switch|boot").Required().Enum("build", "push", "dry-activate", "test", "switch", "boot")
+	deployDeployment         = deploy.Arg("deployment", "File containing the deployment exec expression").HintFiles("nix").Required().ExistingFile()
+	switchAction             = deploy.Arg("switch-action", "Either of " + strings.Join(switchActions, "|")).Required().HintOptions(switchActions...).Enum(switchActions...)
 	deployAskForSudoPasswd   = deploy.Flag("passwd", "Whether to ask interactively for remote sudo password").Default("False").Bool()
 	deploySkipHealthChecks   = deploy.Flag("skip-health-checks", "Whether to ask interactively for remote sudo password").Default("False").Bool()
 	deployHealthCheckTimeout = deploy.Flag("health-check-timeout", "Seconds to wait for all health checks on a host to complete").Default("0").Int()
 	healthCheck              = app.Command("check-health", "Run health checks")
-	healthCheckDeployment    = healthCheck.Arg("deployment", "File containing the deployment exec expression").Required().File()
+	healthCheckDeployment    = healthCheck.Arg("deployment", "File containing the deployment exec expression").HintFiles("nix").Required().ExistingFile()
 	healthCheckTimeout       = healthCheck.Flag("timeout", "Seconds to wait for all health checks on a host to complete").Default("0").Int()
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
@@ -172,7 +174,13 @@ func validateEnvironment() (err error) {
 	return nil
 }
 
-func getHosts(deployment *os.File) (hosts []nix.Host, err error) {
+func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
+
+	deployment, err := os.Open(deploymentFile)
+	if err != nil {
+		return hosts, err
+	}
+
 	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
 
 	deploymentPath, err := filepath.Abs(deployment.Name())
@@ -204,7 +212,7 @@ func getHosts(deployment *os.File) (hosts []nix.Host, err error) {
 func build() (hosts []nix.Host, resultPath string, err error) {
 	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
 
-	deploymentPath, err := filepath.Abs((*deployDeployment).Name())
+	deploymentPath, err := filepath.Abs(*deployDeployment)
 	if err != nil {
 		panic(err)
 	}
@@ -252,7 +260,7 @@ func pushPaths(filteredHosts []nix.Host, resultPath string) {
 func uploadSecrets(filteredHosts []nix.Host, sudoPasswd string) {
 	// upload secrets
 	// relative paths are resolved relative to the deployment file (!)
-	deploymentDir := filepath.Dir((*deployDeployment).Name())
+	deploymentDir := filepath.Dir(*deployDeployment)
 	for _, host := range filteredHosts {
 		fmt.Printf("Uploading secrets to %s:\n", nix.GetHostname(host))
 		for secretName, secret := range host.Secrets {

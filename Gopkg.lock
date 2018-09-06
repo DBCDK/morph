@@ -2,6 +2,11 @@
 
 
 [[projects]]
+  name = "github.com/DBCDK/kingpin"
+  packages = ["."]
+  revision = "v2.2.6-filehints"
+
+[[projects]]
   branch = "master"
   name = "github.com/alecthomas/template"
   packages = [
@@ -46,15 +51,9 @@
   ]
   revision = "3b87a42e500a6dc65dae1a55d0b641295971163e"
 
-[[projects]]
-  name = "gopkg.in/alecthomas/kingpin.v2"
-  packages = ["."]
-  revision = "947dcec5ba9c011838740e680966fd7087a71d0d"
-  version = "v2.2.6"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1010dad4e37f49f18621a9f1a8e689c244f1f50f2e28362507eb924f43ee5b14"
+  inputs-digest = "ecc7da8bc35cd3769273c2cfd701e206c6aab8e0a4e3045bd0b69500dba079a6"
   solver-name = "gps-cdcl"
   solver-version = 1
