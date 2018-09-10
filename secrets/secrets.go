@@ -21,28 +21,28 @@ func GetSecretSize(secret nix.Secret, deploymentWD string) (size int64, err erro
 	return fStats.Size(), nil
 }
 
-func UploadSecret(host nix.Host, sudoPasswd string, secret nix.Secret, deploymentWD string) (err error) {
-	tempPath, err := ssh.MakeTempFile(host)
+func UploadSecret(ctx ssh.Context, host nix.Host, secret nix.Secret, deploymentWD string) (err error) {
+	tempPath, err := ctx.MakeTempFile(host)
 	if err != nil {
 		return err
 	}
 
-	err = ssh.UploadFile(host, utils.GetAbsPathRelativeTo(secret.Source, deploymentWD), tempPath)
+	err = ctx.UploadFile(host, utils.GetAbsPathRelativeTo(secret.Source, deploymentWD), tempPath)
 	if err != nil {
 		return err
 	}
 
-	err = ssh.MoveFile(host, sudoPasswd, tempPath, secret.Destination)
+	err = ctx.MoveFile(host, tempPath, secret.Destination)
 	if err != nil {
 		return err
 	}
 
-	err = ssh.SetOwner(host, sudoPasswd, secret.Destination, secret.Owner.User, secret.Owner.Group)
+	err = ctx.SetOwner(host, secret.Destination, secret.Owner.User, secret.Owner.Group)
 	if err != nil {
 		return err
 	}
 
-	err = ssh.SetPermissions(host, sudoPasswd, secret.Destination, secret.Permissions)
+	err = ctx.SetPermissions(host, secret.Destination, secret.Permissions)
 	if err != nil {
 		return nil
 	}
