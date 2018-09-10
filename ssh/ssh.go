@@ -33,7 +33,7 @@ type SSHContext struct {
 func (ctx *SSHContext) Cmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
 
 	if parts[0] == "sudo" {
-		ctx.SudoCmd(host, parts...)
+		return ctx.SudoCmd(host, parts...)
 	}
 
 	cmdArgs := []string{nix.GetHostname(host)}
@@ -113,7 +113,7 @@ func (ctx *SSHContext) ActivateConfiguration(host nix.Host, configuration string
 		}
 	}
 
-	args := []string{ filepath.Join(configuration, "bin/switch-to-configuration"), action }
+	args := []string{filepath.Join(configuration, "bin/switch-to-configuration"), action}
 
 	var (
 		cmd *exec.Cmd
