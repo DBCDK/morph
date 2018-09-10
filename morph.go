@@ -113,11 +113,11 @@ func doDeploy() {
 		fmt.Println()
 
 		if doUploadSecrets {
-			uploadSecrets(sshContext, singleHostInList)
+			uploadSecrets(&sshContext, singleHostInList)
 		}
 
 		if doActivate {
-			activateConfiguration(sshContext, singleHostInList, resultPath)
+			activateConfiguration(&sshContext, singleHostInList, resultPath)
 		}
 
 		if !*deploySkipHealthChecks {
