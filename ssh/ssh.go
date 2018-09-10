@@ -23,8 +23,6 @@ type Context interface {
 
 	Cmd(host nix.Host, parts ...string) (*exec.Cmd, error)
 	SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error)
-
-	cmd(cmdArgs []string) (*exec.Cmd, error)
 }
 
 type SSHContext struct {
@@ -41,7 +39,8 @@ func (ctx SSHContext) Cmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
 	cmdArgs := []string{nix.GetHostname(host)}
 	cmdArgs = append(cmdArgs, parts...)
 
-	return ctx.cmd(cmdArgs)
+	command := exec.Command("ssh", cmdArgs...)
+	return command, nil
 }
 
 func (ctx SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
@@ -67,10 +66,6 @@ func (ctx SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error)
 	cmdArgs = append(cmdArgs, "-p", "''", "-k", "--")
 	cmdArgs = append(cmdArgs, parts...)
 
-	return ctx.cmd(cmdArgs)
-}
-
-func (ctx SSHContext) cmd(cmdArgs []string) (*exec.Cmd, error) {
 	command := exec.Command("ssh", cmdArgs...)
 	if ctx.sudoPassword != "" {
 		err := writeSudoPassword(command, ctx.sudoPassword)
