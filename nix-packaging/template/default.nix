@@ -1,4 +1,4 @@
-{ stdenv, buildGoPackage, go-bindata }:
+{ stdenv, fetchgit, buildGoPackage, go-bindata }:
 
 buildGoPackage rec {
   name = "morph-unstable-${version}";
@@ -8,10 +8,10 @@ buildGoPackage rec {
 
   buildInputs = [ go-bindata ];
 
-  src = builtins.fetchGit {
+  src = fetchgit {
     url = "https://git-platform.dbc.dk/platform/morph.git";
-    ref = "master";
     rev = version;
+    sha256 = "0000000000000000000000000000000000000000000000000000";
   };
 
   goDeps = ./deps.nix;
