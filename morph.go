@@ -9,14 +9,12 @@ import (
 	"git-platform.dbc.dk/platform/morph/nix"
 	"git-platform.dbc.dk/platform/morph/secrets"
 	"git-platform.dbc.dk/platform/morph/ssh"
-	"golang.org/x/crypto/ssh/terminal"
 	"github.com/DBCDK/kingpin"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 )
 
 var switchActions = []string{ "build", "push", "dry-activate", "test", "switch", "boot" }
@@ -43,7 +41,6 @@ var (
 )
 
 var doPush = false
-var doAskPass = false
 var doUploadSecrets = false
 var doActivate = false
 
@@ -83,10 +80,6 @@ func doDeploy() {
 			*deploySkipHealthChecks = true
 		case "dry-activate":
 			doPush = true
-			// fixme (in ssh/ssh.go) - should be possible to dry-activate without sudo
-			if *deployAskForSudoPasswd {
-				doAskPass = true
-			}
 			doActivate = true
 		case "test":
 			fallthrough
@@ -94,9 +87,6 @@ func doDeploy() {
 			fallthrough
 		case "boot":
 			doPush = true
-			if *deployAskForSudoPasswd {
-				doAskPass = true
-			}
 			doUploadSecrets = true
 			doActivate = true
 		}
@@ -110,11 +100,8 @@ func doDeploy() {
 
 	fmt.Println()
 
-	sudoPasswd := ""
-	if doAskPass {
-		sudoPasswd = askForSudoPassword()
-		fmt.Println()
-		fmt.Println()
+	sshContext := ssh.SSHContext{
+		AskForSudoPassword: *deployAskForSudoPasswd,
 	}
 
 	for _, host := range hosts {
@@ -126,11 +113,11 @@ func doDeploy() {
 		fmt.Println()
 
 		if doUploadSecrets {
-			uploadSecrets(singleHostInList, sudoPasswd)
+			uploadSecrets(&sshContext, singleHostInList)
 		}
 
 		if doActivate {
-			activateConfiguration(singleHostInList, resultPath, sudoPasswd)
+			activateConfiguration(&sshContext, singleHostInList, resultPath)
 		}
 
 		if !*deploySkipHealthChecks {
@@ -234,15 +221,6 @@ func build() (hosts []nix.Host, resultPath string, err error) {
 	return hosts, resultPath, nil
 }
 
-func askForSudoPassword() string {
-	fmt.Print("Please enter remote sudo password: ")
-	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		panic(err)
-	}
-	return string(bytePassword)
-}
-
 func pushPaths(filteredHosts []nix.Host, resultPath string) {
 	for _, host := range filteredHosts {
 		paths, err := nix.GetPathsToPush(host, resultPath)
@@ -257,7 +235,7 @@ func pushPaths(filteredHosts []nix.Host, resultPath string) {
 	}
 }
 
-func uploadSecrets(filteredHosts []nix.Host, sudoPasswd string) {
+func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) {
 	// upload secrets
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir(*deployDeployment)
@@ -270,7 +248,7 @@ func uploadSecrets(filteredHosts []nix.Host, sudoPasswd string) {
 			}
 
 			fmt.Printf("\t* %s (%d bytes).. ", secretName, secretSize)
-			err = secrets.UploadSecret(host, sudoPasswd, secret, deploymentDir)
+			err = secrets.UploadSecret(ctx, host, secret, deploymentDir)
 			if err != nil {
 				fmt.Println("Failed")
 				panic(err)
@@ -281,7 +259,7 @@ func uploadSecrets(filteredHosts []nix.Host, sudoPasswd string) {
 	}
 }
 
-func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPasswd string) {
+func activateConfiguration(ctx ssh.Context, filteredHosts []nix.Host, resultPath string) {
 	fmt.Println("Executing '" + *switchAction + "' on matched hosts:")
 	fmt.Println()
 	for _, host := range filteredHosts {
@@ -293,7 +271,7 @@ func activateConfiguration(filteredHosts []nix.Host, resultPath string, sudoPass
 			panic(err)
 		}
 
-		err = ssh.ActivateConfiguration(host, configuration, *switchAction, sudoPasswd)
+		err = ctx.ActivateConfiguration(host, configuration, *switchAction)
 		if err != nil {
 			panic(err)
 		}

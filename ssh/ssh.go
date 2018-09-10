@@ -4,17 +4,59 @@ import (
 	"errors"
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/nix"
+	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
-func sshSudoCmd(host nix.Host, sudoPasswd string, parts ...string) (cmd *exec.Cmd, err error) {
-	askPasswd := len(sudoPasswd) > 0
-	cmdArgs := []string{nix.GetHostname(host), "sudo"}
-	if askPasswd {
+type Context interface {
+	ActivateConfiguration(host nix.Host, configuration string, action string) error
+	MakeTempFile(host nix.Host) (path string, err error)
+	UploadFile(host nix.Host, source string, destination string) error
+	SetOwner(host nix.Host, path string, user string, group string) error
+	SetPermissions(host nix.Host, path string, permissions string) error
+	MoveFile(host nix.Host, source string, destination string) error
+
+	Cmd(host nix.Host, parts ...string) (*exec.Cmd, error)
+	SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error)
+}
+
+type SSHContext struct {
+	sudoPassword       string
+	AskForSudoPassword bool
+}
+
+func (ctx *SSHContext) Cmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
+
+	if parts[0] == "sudo" {
+		return ctx.SudoCmd(host, parts...)
+	}
+
+	cmdArgs := []string{nix.GetHostname(host)}
+	cmdArgs = append(cmdArgs, parts...)
+
+	command := exec.Command("ssh", cmdArgs...)
+	return command, nil
+}
+
+func (ctx *SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
+
+	// ask for password if not done already
+	if ctx.AskForSudoPassword && ctx.sudoPassword == "" {
+		ctx.sudoPassword = askForSudoPassword()
+	}
+
+	cmdArgs := []string{nix.GetHostname(host)}
+	// prepend "sudo" to command if not already supplied
+	if parts[0] != "sudo" {
+		cmdArgs = append(cmdArgs, "sudo")
+	}
+
+	if ctx.sudoPassword != "" {
 		cmdArgs = append(cmdArgs, "-S")
 	} else {
 		// no password supplied; request non-interactive sudo, which will fail with an error if a password was required
@@ -23,15 +65,25 @@ func sshSudoCmd(host nix.Host, sudoPasswd string, parts ...string) (cmd *exec.Cm
 
 	cmdArgs = append(cmdArgs, "-p", "''", "-k", "--")
 	cmdArgs = append(cmdArgs, parts...)
-	cmd = exec.Command("ssh", cmdArgs...)
-	if askPasswd {
-		err := writeSudoPassword(cmd, sudoPasswd)
+
+	command := exec.Command("ssh", cmdArgs...)
+	if ctx.sudoPassword != "" {
+		err := writeSudoPassword(command, ctx.sudoPassword)
 		if err != nil {
 			return nil, err
 		}
 	}
+	return command, nil
+}
 
-	return
+func askForSudoPassword() string {
+	fmt.Print("Please enter remote sudo password: ")
+	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println()
+	return string(bytePassword)
 }
 
 func writeSudoPassword(cmd *exec.Cmd, sudoPasswd string) (err error) {
@@ -45,10 +97,10 @@ func writeSudoPassword(cmd *exec.Cmd, sudoPasswd string) (err error) {
 	return nil
 }
 
-func ActivateConfiguration(host nix.Host, configuration string, action string, sudoPasswd string) error {
+func (ctx *SSHContext) ActivateConfiguration(host nix.Host, configuration string, action string) error {
 
 	if action == "switch" || action == "boot" {
-		cmd, err := sshSudoCmd(host, sudoPasswd, "nix-env", "--profile", "/nix/var/nix/profiles/system", "--set", configuration)
+		cmd, err := ctx.SudoCmd(host, "nix-env", "--profile", "/nix/var/nix/profiles/system", "--set", configuration)
 		if err != nil {
 			return err
 		}
@@ -61,7 +113,17 @@ func ActivateConfiguration(host nix.Host, configuration string, action string, s
 		}
 	}
 
-	cmd, err := sshSudoCmd(host, sudoPasswd, filepath.Join(configuration, "bin/switch-to-configuration"), action)
+	args := []string{filepath.Join(configuration, "bin/switch-to-configuration"), action}
+
+	var (
+		cmd *exec.Cmd
+		err error
+	)
+	if action == "dry-activate" {
+		cmd, err = ctx.Cmd(host, args...)
+	} else {
+		cmd, err = ctx.SudoCmd(host, args...)
+	}
 	if err != nil {
 		return err
 	}
@@ -76,10 +138,8 @@ func ActivateConfiguration(host nix.Host, configuration string, action string, s
 	return nil
 }
 
-func MakeTempFile(host nix.Host) (path string, err error) {
-	cmd := exec.Command(
-		"ssh", nix.GetHostname(host), "mktemp",
-	)
+func (ctx *SSHContext) MakeTempFile(host nix.Host) (path string, err error) {
+	cmd, _ := ctx.Cmd(host, "mktemp")
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
@@ -95,7 +155,7 @@ func MakeTempFile(host nix.Host) (path string, err error) {
 	return tempFile, nil
 }
 
-func UploadFile(host nix.Host, source string, destination string) (err error) {
+func (ctx *SSHContext) UploadFile(host nix.Host, source string, destination string) (err error) {
 	destinationAndHost := nix.GetHostname(host) + ":" + destination
 	cmd := exec.Command(
 		"scp", source, destinationAndHost,
@@ -113,8 +173,8 @@ func UploadFile(host nix.Host, source string, destination string) (err error) {
 	return nil
 }
 
-func MoveFile(host nix.Host, sudoPasswd string, source string, destination string) (err error) {
-	cmd, err := sshSudoCmd(host, sudoPasswd, "mv", source, destination)
+func (ctx *SSHContext) MoveFile(host nix.Host, source string, destination string) (err error) {
+	cmd, err := ctx.SudoCmd(host, "mv", source, destination)
 	if err != nil {
 		return err
 	}
@@ -131,8 +191,8 @@ func MoveFile(host nix.Host, sudoPasswd string, source string, destination strin
 	return nil
 }
 
-func SetOwner(host nix.Host, sudoPasswd string, path string, user string, group string) (err error) {
-	cmd, err := sshSudoCmd(host, sudoPasswd, "chown", user+"."+group, path)
+func (ctx *SSHContext) SetOwner(host nix.Host, path string, user string, group string) (err error) {
+	cmd, err := ctx.SudoCmd(host, "chown", user+"."+group, path)
 	if err != nil {
 		return err
 	}
@@ -149,8 +209,8 @@ func SetOwner(host nix.Host, sudoPasswd string, path string, user string, group 
 	return nil
 }
 
-func SetPermissions(host nix.Host, sudoPasswd string, path string, permissions string) (err error) {
-	cmd, err := sshSudoCmd(host, sudoPasswd, "chmod", permissions, path)
+func (ctx *SSHContext) SetPermissions(host nix.Host, path string, permissions string) (err error) {
+	cmd, err := ctx.SudoCmd(host, "chmod", permissions, path)
 	if err != nil {
 		return err
 	}
