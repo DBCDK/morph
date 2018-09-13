@@ -17,7 +17,7 @@ import (
 	"strings"
 )
 
-var switchActions = []string{"push", "dry-activate", "test", "switch", "boot"}
+var switchActions = []string{"dry-activate", "test", "switch", "boot"}
 
 var (
 	app                    = kingpin.New("morph", "NixOS host manager").Version("1.0")
@@ -28,12 +28,13 @@ var (
 	selectLimit            = app.Flag("limit", "Select at most n hosts").Int()
 	deployment             string
 	healthCheckTimeout     int
-	build                  = app.Command("build", "Build machines")
-	deploy                 = app.Command("deploy", "Deploy machines")
+	build                  = buildCmd(app.Command("build", "Build machines"))
+	push                   = pushCmd(app.Command("push", "Push machines"))
+	deploy                 = deployCmd(app.Command("deploy", "Deploy machines"))
 	deploySwitchAction     string
 	deploySkipHealthChecks bool
 	deployAskForSudoPasswd bool
-	healthCheck            = app.Command("check-health", "Run health checks")
+	healthCheck            = healthCheckCmd(app.Command("check-health", "Run health checks"))
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
 	assetRoot, assetsErr = assets.Setup()
@@ -56,31 +57,39 @@ func healthCheckTimeoutFlag(cmd *kingpin.CmdClause) {
 		IntVar(&healthCheckTimeout)
 }
 
-func configureBuildCmd() {
-	deploymentArg(build)
+func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	deploymentArg(cmd)
+	return cmd
 }
 
-func configureDeployCmd() {
-	deploymentArg(deploy)
-	healthCheckTimeoutFlag(deploy)
-	deploy.
+func pushCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	deploymentArg(cmd)
+	return cmd
+}
+
+func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	deploymentArg(cmd)
+	healthCheckTimeoutFlag(cmd)
+	cmd.
 		Flag("skip-health-checks", "Whether to skip all health checks").
 		Default("False").
 		BoolVar(&deploySkipHealthChecks)
-	deploy.
+	cmd.
 		Flag("passwd", "Whether to ask interactively for remote sudo password").
 		Default("False").
 		BoolVar(&deployAskForSudoPasswd)
-	deploy.
+	cmd.
 		Arg("switch-action", "Either of "+strings.Join(switchActions, "|")).
 		Required().
 		HintOptions(switchActions...).
 		EnumVar(&deploySwitchAction, switchActions...)
+	return cmd
 }
 
-func configureHealthCheckCmd() {
-	deploymentArg(healthCheck)
-	healthCheckTimeoutFlag(healthCheck)
+func healthCheckCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	deploymentArg(cmd)
+	healthCheckTimeoutFlag(cmd)
+	return cmd
 }
 
 func init() {
@@ -100,10 +109,6 @@ func init() {
 
 func main() {
 
-	configureBuildCmd()
-	configureDeployCmd()
-	configureHealthCheckCmd()
-
 	clause := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	hosts, err := getHosts(deployment)
@@ -113,29 +118,38 @@ func main() {
 
 	switch clause {
 	case build.FullCommand():
-		doBuild(hosts)
+		execBuild(hosts)
+	case push.FullCommand():
+		execPush(hosts)
 	case deploy.FullCommand():
-		doDeploy(hosts)
+		execDeploy(hosts)
 	case healthCheck.FullCommand():
-		doHealthCheck(hosts)
+		execHealthCheck(hosts)
 	}
 
 	assets.Teardown(assetRoot)
 }
 
-func doBuild(hosts []nix.Host) {
-	_, err := buildHosts(hosts)
+func execBuild(hosts []nix.Host) (string, error) {
+	resultPath, err := buildHosts(hosts)
+	if err != nil {
+		return "", err
+	}
+
+	return resultPath, nil
+}
+
+func execPush(hosts []nix.Host) {
+	resultPath, err := execBuild(hosts)
 	if err != nil {
 		panic(err)
 	}
+	pushPaths(hosts, resultPath)
 }
 
-func doDeploy(hosts []nix.Host) {
+func execDeploy(hosts []nix.Host) {
 	if !*dryRun {
 		switch deploySwitchAction {
-		case "push":
-			doPush = true
-			fallthrough
 		case "dry-activate":
 			doPush = true
 			doActivate = true
@@ -190,7 +204,7 @@ func doDeploy(hosts []nix.Host) {
 	}
 }
 
-func doHealthCheck(hosts []nix.Host) {
+func execHealthCheck(hosts []nix.Host) {
 	for _, host := range hosts {
 		healthchecks.Perform(host, healthCheckTimeout)
 	}
