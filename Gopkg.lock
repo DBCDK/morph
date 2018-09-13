@@ -4,7 +4,7 @@
 [[projects]]
   name = "github.com/DBCDK/kingpin"
   packages = ["."]
-  revision = "v2.2.6-filehints"
+  revision = "88824d7271b0cbc3398f21db9c5d4d24e43a4d37"
 
 [[projects]]
   branch = "master"
@@ -20,6 +20,12 @@
   name = "github.com/alecthomas/units"
   packages = ["."]
   revision = "2efee857e7cfd4f3d0138cc3cbb1b4966962b93a"
+
+[[projects]]
+  branch = "v1"
+  name = "gopkg.in/mattes/go-expand-tilde.v1"
+  packages = ["."]
+  revision = "cb884138e64c9a8bf5c7d6106d74b0fca082df0c"
 
 [[projects]]
   name = "github.com/gobwas/glob"

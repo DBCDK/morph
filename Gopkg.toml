@@ -34,8 +34,8 @@
   name = "golang.org/x/crypto"
 
 [[constraint]]
+  branch = "hint-files"
   name = "github.com/DBCDK/kingpin"
-  revision = "v2.2.6-filehints"
 
 [prune]
   go-tests = true
