@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type Context interface {
@@ -23,6 +24,7 @@ type Context interface {
 
 	Cmd(host nix.Host, parts ...string) (*exec.Cmd, error)
 	SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error)
+	CmdInteractive(host nix.Host, timeout int, parts ...string)
 }
 
 type SSHContext struct {
@@ -31,6 +33,11 @@ type SSHContext struct {
 }
 
 func (ctx *SSHContext) Cmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
+
+	var err error
+	if parts, err = valCommand(parts); err != nil {
+		return nil, err
+	}
 
 	if parts[0] == "sudo" {
 		return ctx.SudoCmd(host, parts...)
@@ -45,16 +52,23 @@ func (ctx *SSHContext) Cmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
 
 func (ctx *SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
 
+	var err error
+	if parts, err = valCommand(parts); err != nil {
+		return nil, err
+	}
+
 	// ask for password if not done already
 	if ctx.AskForSudoPassword && ctx.sudoPassword == "" {
 		ctx.sudoPassword = askForSudoPassword()
 	}
 
 	cmdArgs := []string{nix.GetHostname(host)}
-	// prepend "sudo" to command if not already supplied
-	if parts[0] != "sudo" {
-		cmdArgs = append(cmdArgs, "sudo")
+
+	// normalize sudo
+	if parts[0] == "sudo" {
+		parts = parts[1:]
 	}
+	cmdArgs = append(cmdArgs, "sudo")
 
 	if ctx.sudoPassword != "" {
 		cmdArgs = append(cmdArgs, "-S")
@@ -74,6 +88,52 @@ func (ctx *SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error
 		}
 	}
 	return command, nil
+}
+
+func valCommand(parts []string) ([]string, error) {
+
+	if len(parts) < 1 {
+		return nil, errors.New("No command specified")
+	}
+
+	return parts, nil
+}
+
+func (ctx *SSHContext) CmdInteractive(host nix.Host, timeout int, parts ...string) {
+	doneChan := make(chan bool)
+	timeoutChan := make(chan bool)
+	var cmd *exec.Cmd
+	var err error
+	if timeout > 0 {
+		go func() {
+			time.Sleep(time.Duration(timeout) * time.Second)
+			timeoutChan <- true
+		}()
+	}
+	go func() {
+		cmd, err = ctx.Cmd(host, parts...)
+		if err == nil {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			err = cmd.Run()
+		}
+		doneChan <- true
+
+		if err != nil && !<-timeoutChan {
+			fmt.Fprintf(os.Stderr, "Exec of cmd: %s failed with err: '%s'\n", parts, err.Error())
+		}
+	}()
+
+	for {
+		select {
+		case <-timeoutChan:
+			fmt.Fprintf(os.Stderr, "Exec of cmd: %s timed out\n", parts)
+			cmd.Process.Kill()
+			return
+		case <-doneChan:
+			return
+		}
+	}
 }
 
 func askForSudoPassword() string {

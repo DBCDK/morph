@@ -2,9 +2,10 @@
 
 
 [[projects]]
+  branch = "morph"
   name = "github.com/DBCDK/kingpin"
   packages = ["."]
-  revision = "88824d7271b0cbc3398f21db9c5d4d24e43a4d37"
+  revision = "8554767bc91254c59c7297a99e9867c770e4eadb"
 
 [[projects]]
   branch = "master"

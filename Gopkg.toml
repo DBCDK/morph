@@ -34,7 +34,7 @@
   name = "golang.org/x/crypto"
 
 [[constraint]]
-  branch = "hint-files"
+  branch = "morph"
   name = "github.com/DBCDK/kingpin"
 
 [prune]
