@@ -12,5 +12,5 @@
 # binary assets
 /assets/assets.go
 
-# generated nix package
-/nix-packaging/out/*
+# nix result links
+/result*

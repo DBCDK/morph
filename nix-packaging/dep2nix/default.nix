@@ -1,16 +1,15 @@
-{ pkgs, stdenv, buildGoPackage, ... }:
-with import <nixpkgs>{};
+{ stdenv, fetchgit, buildGoPackage, ... }:
 
 buildGoPackage rec {
   name = "dep2nix-${version}";
-  version = "d94a118a9f8ae90cb4831f200cd66ff3d9deffab";
+  version = "0.0.2";
 
   goPackagePath = "github.com/nixcloud/dep2nix";
 
-  src = builtins.fetchGit {
+  src = fetchgit {
     url = "https://github.com/nixcloud/dep2nix.git";
-    ref = "master";
     rev = version;
+    sha256 = "17csgnd6imr1l0gpirsvr5qg7z0mpzxj211p2nwqilrvbp8zj7vg";
   };
 
   goDeps = ./deps.nix;

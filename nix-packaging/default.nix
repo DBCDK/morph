@@ -1,18 +1,22 @@
-{ stdenv, fetchgit, buildGoPackage, go-bindata }:
+{ stdenv, fetchgit, buildGoPackage, go-bindata, lib,
+  version ? "dev"
+}:
 
 buildGoPackage rec {
   name = "morph-unstable-${version}";
-  version = "__VERSION__";
 
   goPackagePath = "git-platform.dbc.dk/platform/morph";
 
   buildInputs = [ go-bindata ];
 
-  src = fetchgit {
-    url = "https://git-platform.dbc.dk/platform/morph.git";
-    rev = version;
-    sha256 = "0000000000000000000000000000000000000000000000000000";
-  };
+  src = with lib; builtins.filterSource
+      (path: type:
+        (type == "directory" && path != "nix-packaging" && !hasPrefix "." (baseNameOf path)) ||
+        (hasSuffix "data" (dirOf path) && hasSuffix ".nix" path) ||
+        hasSuffix ".go" path)
+        ./..;
+
+  inherit version;
 
   goDeps = ./deps.nix;
 
