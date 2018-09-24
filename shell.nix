@@ -6,8 +6,6 @@ let
   packagingOut = "./nix-packaging";
 
   shellHook = ''
-    set -e
-
     if [[ -f ./result-bin/bin/morph ]] && [[ `which morph 2>&1 >/dev/null` ]]; then
       export PATH=$PATH:$(readlink -f ./result-bin/bin)
       source <(morph --completion-script-bash)
