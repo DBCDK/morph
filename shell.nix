@@ -6,12 +6,16 @@ let
   packagingOut = "./nix-packaging";
 
   shellHook = ''
-    if [[ -f ./result-bin/bin/morph ]] && [[ `which morph 2>&1 >/dev/null` ]]; then
-      export PATH=$PATH:$(readlink -f ./result-bin/bin)
+    if [[ -f ./result-bin/bin/morph ]]; then
+      if [[ `${which} morph 2>&1 >/dev/null` ]]; then
+        export PATH=$PATH:$(readlink -f ./result-bin/bin)
+      fi
       source <(morph --completion-script-bash)
     fi
   '';
-  makeEnv = writeShellScriptBin "make-env" shellHook;
+  makeEnv = writeScriptBin "make-env" (''
+    #!${bashInteractive}/bin/bash
+  '' + shellHook);
   makeDeps = writeShellScriptBin "make-deps" ''
     set -e
 
@@ -42,7 +46,9 @@ in
      makeEnv
      makeDeps
      makeBuild
+     nix
      nix-prefetch-git
+     openssh
     ];
 
     inherit shellHook;
