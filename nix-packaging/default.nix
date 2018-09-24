@@ -2,22 +2,25 @@
   version ? "dev"
 }:
 
+with builtins; with lib;
+let
+  blacklistedDirs = [ "nix-packaging" "vendor" "^\\..+$" ];
+  whitelistedFiles = [ "^.+\\.nix$" "^.+\\.go$" ];
+  filterList = file: list: elem true (map (pattern: isList (match pattern file)) list);
+  srcFilter = path: type: (
+    if type == "regular" then filterList (baseNameOf path) whitelistedFiles
+    else if type == "directory" then !filterList (baseNameOf path) blacklistedDirs
+    else false);
+in
 buildGoPackage rec {
   name = "morph-unstable-${version}";
+  inherit version;
 
   goPackagePath = "git-platform.dbc.dk/platform/morph";
 
   buildInputs = [ go-bindata ];
 
-  src = with lib; builtins.filterSource
-      (path: type:
-        (type == "directory" && path != "nix-packaging" && !hasPrefix "." (baseNameOf path)) ||
-        (hasSuffix "data" (dirOf path) && hasSuffix ".nix" path) ||
-        hasSuffix ".go" path)
-        ./..;
-
-  inherit version;
-
+  src = filterSource srcFilter ./..;
   goDeps = ./deps.nix;
 
   prePatch = ''
