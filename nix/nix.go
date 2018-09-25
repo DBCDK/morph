@@ -145,7 +145,7 @@ func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err 
 
 	bytes, err := cmd.CombinedOutput()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		errorMessage := fmt.Sprintf(
 			"Error while running `nix eval ..`:\n%s", string(bytes),
 		)
@@ -186,7 +186,7 @@ func BuildMachines(evalMachines string, deploymentPath string, hosts []Host) (pa
 	defer os.Remove(resultLinkPath)
 
 	// show process output on attached stdout/stderr
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 
@@ -237,7 +237,7 @@ func Push(host Host, paths ...string) (err error) {
 			"--to", "ssh://"+host.TargetHost,
 		)
 
-		cmd.Stdout = os.Stdout
+		cmd.Stdout = os.Stderr
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 

@@ -135,7 +135,7 @@ func init() {
 	}
 
 	if assetsErr != nil {
-		fmt.Println("Error unpacking assets:")
+		fmt.Fprintln(os.Stderr, "Error unpacking assets:")
 		panic(assetsErr)
 	}
 
@@ -175,9 +175,9 @@ func execExecute(hosts []nix.Host) {
 	}
 
 	for _, host := range hosts {
-		fmt.Println("** " + host.Name)
+		fmt.Fprintln(os.Stderr, "** " + host.Name)
 		sshContext.CmdInteractive(host, timeout, executeCommand...)
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 	}
 
 }
@@ -221,7 +221,7 @@ func execDeploy(hosts []nix.Host) {
 		panic(err)
 	}
 
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 
 	sshContext := ssh.SSHContext{
 		AskForSudoPassword: askForSudoPasswd,
@@ -233,7 +233,7 @@ func execDeploy(hosts []nix.Host) {
 		if doPush {
 			pushPaths(singleHostInList, resultPath)
 		}
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 
 		if doUploadSecrets {
 			uploadSecrets(&sshContext, singleHostInList)
@@ -246,13 +246,13 @@ func execDeploy(hosts []nix.Host) {
 		if !deploySkipHealthChecks {
 			err := healthchecks.Perform(host, timeout)
 			if err != nil {
-				fmt.Println()
-				fmt.Println("Not deploying to additional hosts, since a host health check failed.")
+				fmt.Fprintln(os.Stderr)
+				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host health check failed.")
 				os.Exit(1)
 			}
 		}
 
-		fmt.Println("Done:", nix.GetHostname(host))
+		fmt.Fprintln(os.Stderr, "Done:", nix.GetHostname(host))
 	}
 }
 
@@ -305,11 +305,11 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 
 	filteredHosts := filter.FilterHosts(matchingHosts, selectSkip, selectEvery, selectLimit)
 
-	fmt.Printf("Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
+	fmt.Fprintf(os.Stderr, "Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Printf("\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
+		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 
 	return filteredHosts, nil
 }
@@ -332,7 +332,8 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 		return
 	}
 
-	fmt.Println("nix result path: " + resultPath)
+	fmt.Fprintln(os.Stderr, "nix result path: ")
+	fmt.Println(resultPath)
 	return
 }
 
@@ -342,9 +343,9 @@ func pushPaths(filteredHosts []nix.Host, resultPath string) {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("Pushing paths to %v:\n", host.TargetHost)
+		fmt.Fprintf(os.Stderr, "Pushing paths to %v:\n", host.TargetHost)
 		for _, path := range paths {
-			fmt.Printf("\t* %s\n", path)
+			fmt.Fprintf(os.Stderr, "\t* %s\n", path)
 		}
 		nix.Push(host, paths...)
 	}
@@ -355,31 +356,31 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) {
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir(deployment)
 	for _, host := range filteredHosts {
-		fmt.Printf("Uploading secrets to %s:\n", nix.GetHostname(host))
+		fmt.Fprintf(os.Stderr, "Uploading secrets to %s:\n", nix.GetHostname(host))
 		for secretName, secret := range host.Secrets {
 			secretSize, err := secrets.GetSecretSize(secret, deploymentDir)
 			if err != nil {
 				panic(err)
 			}
 
-			fmt.Printf("\t* %s (%d bytes).. ", secretName, secretSize)
+			fmt.Fprintf(os.Stderr, "\t* %s (%d bytes).. ", secretName, secretSize)
 			err = secrets.UploadSecret(ctx, host, secret, deploymentDir)
 			if err != nil {
-				fmt.Println("Failed")
+				fmt.Fprintln(os.Stderr, "Failed")
 				panic(err)
 			} else {
-				fmt.Println("OK")
+				fmt.Fprintln(os.Stderr, "OK")
 			}
 		}
 	}
 }
 
 func activateConfiguration(ctx ssh.Context, filteredHosts []nix.Host, resultPath string) {
-	fmt.Println("Executing '" + deploySwitchAction + "' on matched hosts:")
-	fmt.Println()
+	fmt.Fprintln(os.Stderr, "Executing '" + deploySwitchAction + "' on matched hosts:")
+	fmt.Fprintln(os.Stderr)
 	for _, host := range filteredHosts {
 
-		fmt.Println("** " + host.TargetHost)
+		fmt.Fprintln(os.Stderr, "** " + host.TargetHost)
 
 		configuration, err := nix.GetNixSystemPath(host, resultPath)
 		if err != nil {
@@ -391,6 +392,6 @@ func activateConfiguration(ctx ssh.Context, filteredHosts []nix.Host, resultPath
 			panic(err)
 		}
 
-		fmt.Println()
+		fmt.Fprintln(os.Stderr)
 	}
 }
