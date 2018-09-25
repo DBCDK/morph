@@ -177,8 +177,8 @@ func BuildMachines(evalMachines string, deploymentPath string, hosts []Host) (pa
 	resultLinkPath := filepath.Join(tmpdir, "result")
 
 	cmd := exec.Command(
-		"nix", "build",
-		"-f", evalMachines, "machines",
+		"nix-build", evalMachines,
+		"-A", "machines",
 		"--arg", "networkExpr", deploymentPath,
 		"--arg", "names", hostsArg,
 		"--out-link", resultLinkPath,
