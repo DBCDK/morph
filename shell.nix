@@ -19,6 +19,14 @@ let
   makeDeps = writeShellScriptBin "make-deps" ''
     set -e
 
+    # Populate /vendor-dir (for convenience in local dev)
+    if [ "$1" == "update" ]; then
+      ${dep}/bin/dep ensure -v -update
+    else
+      ${dep}/bin/dep ensure -v -vendor-only
+    fi
+
+    # Write /nix-packaging/deps.nix (for use in distribution)
     outpath=$(readlink -f ${packagingOut})
     outpath="$outpath/deps.nix"
 
@@ -41,7 +49,6 @@ in
 
     buildInputs = [
      bashInteractive
-     dep
      git
      makeEnv
      makeDeps
