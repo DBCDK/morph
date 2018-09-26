@@ -8,7 +8,7 @@ let
   shellHook = ''
     if [[ -f ./result-bin/bin/morph ]]; then
       if [[ `${which} morph 2>&1 >/dev/null` ]]; then
-        export PATH=$PATH:$(readlink -f ./result-bin/bin)
+        export PATH=$PATH:$(pwd)/result-bin/bin
       fi
       source <(morph --completion-script-bash)
     fi
