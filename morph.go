@@ -175,7 +175,7 @@ func execExecute(hosts []nix.Host) {
 	}
 
 	for _, host := range hosts {
-		fmt.Fprintln(os.Stderr, "** " + host.Name)
+		fmt.Fprintln(os.Stderr, "** "+host.Name)
 		sshContext.CmdInteractive(host, timeout, executeCommand...)
 		fmt.Fprintln(os.Stderr)
 	}
@@ -376,11 +376,11 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) {
 }
 
 func activateConfiguration(ctx ssh.Context, filteredHosts []nix.Host, resultPath string) {
-	fmt.Fprintln(os.Stderr, "Executing '" + deploySwitchAction + "' on matched hosts:")
+	fmt.Fprintln(os.Stderr, "Executing '"+deploySwitchAction+"' on matched hosts:")
 	fmt.Fprintln(os.Stderr)
 	for _, host := range filteredHosts {
 
-		fmt.Fprintln(os.Stderr, "** " + host.TargetHost)
+		fmt.Fprintln(os.Stderr, "** "+host.TargetHost)
 
 		configuration, err := nix.GetNixSystemPath(host, resultPath)
 		if err != nil {
