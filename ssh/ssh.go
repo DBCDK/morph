@@ -59,7 +59,10 @@ func (ctx *SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error
 
 	// ask for password if not done already
 	if ctx.AskForSudoPassword && ctx.sudoPassword == "" {
-		ctx.sudoPassword = askForSudoPassword()
+		ctx.sudoPassword, err = askForSudoPassword()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cmdArgs := []string{nix.GetHostname(host)}
@@ -136,14 +139,14 @@ func (ctx *SSHContext) CmdInteractive(host nix.Host, timeout int, parts ...strin
 	}
 }
 
-func askForSudoPassword() string {
-	fmt.Fprint(os.Stderr, "Please enter remote sudo password: ")
+func askForSudoPassword() (string, error) {
+	fmt.Fprintln(os.Stderr, "Please enter remote sudo password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 	fmt.Fprintln(os.Stderr)
-	return string(bytePassword)
+	return string(bytePassword), nil
 }
 
 func writeSudoPassword(cmd *exec.Cmd, sudoPasswd string) (err error) {
