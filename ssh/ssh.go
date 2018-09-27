@@ -113,7 +113,7 @@ func (ctx *SSHContext) CmdInteractive(host nix.Host, timeout int, parts ...strin
 	go func() {
 		cmd, err = ctx.Cmd(host, parts...)
 		if err == nil {
-			cmd.Stdout = os.Stdout
+			cmd.Stdout = os.Stderr
 			cmd.Stderr = os.Stderr
 			err = cmd.Run()
 		}
@@ -137,12 +137,12 @@ func (ctx *SSHContext) CmdInteractive(host nix.Host, timeout int, parts ...strin
 }
 
 func askForSudoPassword() string {
-	fmt.Print("Please enter remote sudo password: ")
+	fmt.Fprint(os.Stderr, "Please enter remote sudo password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println()
+	fmt.Fprintln(os.Stderr)
 	return string(bytePassword)
 }
 
@@ -165,7 +165,7 @@ func (ctx *SSHContext) ActivateConfiguration(host nix.Host, configuration string
 			return err
 		}
 
-		cmd.Stdout = os.Stdout
+		cmd.Stdout = os.Stderr
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
@@ -188,7 +188,7 @@ func (ctx *SSHContext) ActivateConfiguration(host nix.Host, configuration string
 		return err
 	}
 
-	cmd.Stdout = os.Stdout
+	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	err = cmd.Run()
 	if err != nil {
