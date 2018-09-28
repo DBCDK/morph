@@ -140,7 +140,7 @@ func (ctx *SSHContext) CmdInteractive(host nix.Host, timeout int, parts ...strin
 }
 
 func askForSudoPassword() (string, error) {
-	fmt.Fprintln(os.Stderr, "Please enter remote sudo password: ")
+	fmt.Fprint(os.Stderr, "Please enter remote sudo password: ")
 	bytePassword, err := terminal.ReadPassword(int(syscall.Stdin))
 	if err != nil {
 		return "", err
