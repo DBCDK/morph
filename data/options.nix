@@ -46,6 +46,12 @@ keyOptionsType = submodule ({ ... }: {
       type = str;
       description = "Permissions expressed as octal.";
     };
+
+    action = mkOption {
+      default = [];
+      type = listOf str;
+      description = "Action to perform on remote host after uploading secret.";
+    };
   };
 });
 

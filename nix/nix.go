@@ -50,6 +50,7 @@ type Secret struct {
 	Destination string
 	Owner       Owner
 	Permissions string
+	Action      []string
 }
 
 type Owner struct {
