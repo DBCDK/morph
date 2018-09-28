@@ -255,7 +255,7 @@ func (ctx *SSHContext) MoveFile(host nix.Host, source string, destination string
 }
 
 func (ctx *SSHContext) SetOwner(host nix.Host, path string, user string, group string) (err error) {
-	cmd, err := ctx.SudoCmd(host, "chown", user+"."+group, path)
+	cmd, err := ctx.SudoCmd(host, "chown", user+":"+group, path)
 	if err != nil {
 		return err
 	}
