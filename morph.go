@@ -246,19 +246,21 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		}
 		fmt.Fprintln(os.Stderr)
 
-		if doUploadSecrets {
-			err = uploadSecrets(&sshContext, singleHostInList)
-			if err != nil {
-				return "", err
-			}
-		}
-
 		if doActivate {
 			err = activateConfiguration(&sshContext, singleHostInList, resultPath)
 			if err != nil {
 				return "", err
 			}
 		}
+
+		if doUploadSecrets {
+			err = uploadSecrets(&sshContext, singleHostInList)
+			if err != nil {
+				return "", err
+			}
+		}
+		fmt.Fprintln(os.Stderr)
+		fmt.Fprintln(os.Stderr)
 
 		if !deploySkipHealthChecks {
 			err := healthchecks.Perform(host, timeout)
@@ -401,6 +403,11 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) error {
 				return err
 			} else {
 				fmt.Fprintln(os.Stderr, "OK")
+			}
+			if len(secret.Action) > 0 {
+				fmt.Fprintf(os.Stderr, "\t- executing post-upload command: " + strings.Join(secret.Action, " "))
+				// Errors from secret actions will be printed on screen, but we won't stop the flow if they fail
+				ctx.CmdInteractive(host, timeout, secret.Action...)
 			}
 		}
 	}
