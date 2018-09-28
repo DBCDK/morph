@@ -276,7 +276,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 }
 
 func execHealthCheck(hosts []nix.Host) error {
-	var err error;
+	var err error
 	for _, host := range hosts {
 		err = healthchecks.Perform(host, timeout)
 	}
@@ -394,8 +394,8 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) error {
 				return err
 			}
 
-			fmt.Fprintf(os.Stderr, "\t* %s (%d bytes).. ", secretName, secretSize)
 			err = secrets.UploadSecret(ctx, host, secret, deploymentDir)
+			fmt.Fprintf(os.Stderr, "\t* %s (%d bytes).. ", secretName, secretSize)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "Failed")
 				return err
