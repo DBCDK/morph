@@ -1,6 +1,7 @@
 package nix
 
 import (
+	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"errors"
@@ -144,16 +145,19 @@ func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err 
 		"--json",
 	)
 
-	bytes, err := cmd.CombinedOutput()
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix eval ..`:\n%s", string(bytes),
+			"Error while running `nix eval ..`: %s", err.Error(),
 		)
 		return hosts, errors.New(errorMessage)
 	}
 
-	err = json.Unmarshal(bytes, &hosts)
+	err = json.Unmarshal(stdout.Bytes(), &hosts)
 	if err != nil {
 		return hosts, err
 	}
