@@ -29,6 +29,7 @@ var (
 	deployment             string
 	timeout                int
 	askForSudoPasswd       bool
+	nixBuildArg            []string
 	build                  = buildCmd(app.Command("build", "Build machines"))
 	push                   = pushCmd(app.Command("push", "Push machines"))
 	deploy                 = deployCmd(app.Command("deploy", "Deploy machines"))
@@ -80,8 +81,14 @@ func selectorFlags(cmd *kingpin.CmdClause) {
 		IntVar(&selectLimit)
 }
 
+func nixBuildArgFlag(cmd *kingpin.CmdClause) {
+	cmd.Flag("build-arg", "Extra argument to pass on to nix-build command.").
+		StringsVar(&nixBuildArg)
+}
+
 func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	nixBuildArgFlag(cmd)
 	deploymentArg(cmd)
 	return cmd
 }
@@ -107,6 +114,7 @@ func executeCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	nixBuildArgFlag(cmd)
 	deploymentArg(cmd)
 	timeoutFlag(cmd)
 	askForSudoPasswdFlag(cmd)
@@ -355,7 +363,7 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 		return
 	}
 
-	resultPath, err = nix.BuildMachines(evalMachinesPath, deploymentPath, hosts)
+	resultPath, err = nix.BuildMachines(evalMachinesPath, deploymentPath, hosts, nixBuildArg)
 	if err != nil {
 		return
 	}
