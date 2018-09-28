@@ -161,7 +161,7 @@ func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err 
 	return hosts, nil
 }
 
-func BuildMachines(evalMachines string, deploymentPath string, hosts []Host) (path string, err error) {
+func BuildMachines(evalMachines string, deploymentPath string, hosts []Host, nixArgs []string) (path string, err error) {
 	hostsArg := "["
 	for _, host := range hosts {
 		hostsArg += "\"" + host.TargetHost + "\" "
@@ -177,13 +177,17 @@ func BuildMachines(evalMachines string, deploymentPath string, hosts []Host) (pa
 
 	resultLinkPath := filepath.Join(tmpdir, "result")
 
-	cmd := exec.Command(
-		"nix-build", evalMachines,
+	args := []string{evalMachines,
 		"-A", "machines",
 		"--arg", "networkExpr", deploymentPath,
 		"--arg", "names", hostsArg,
-		"--out-link", resultLinkPath,
-	)
+		"--out-link", resultLinkPath}
+
+	if len(nixArgs) > 0 {
+		args = append(args, nixArgs...)
+	}
+
+	cmd := exec.Command("nix-build", args...)
 	defer os.Remove(resultLinkPath)
 
 	// show process output on attached stdout/stderr
