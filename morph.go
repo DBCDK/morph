@@ -157,6 +157,9 @@ func main() {
 	clause := kingpin.MustParse(app.Parse(os.Args[1:]))
 
 	hosts, err := getHosts(deployment)
+	if err != nil {
+		handleError(clause, hosts, err)
+	}
 
 	switch clause {
 	case build.FullCommand():
@@ -413,7 +416,7 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) error {
 				fmt.Fprintln(os.Stderr, "OK")
 			}
 			if len(secret.Action) > 0 {
-				fmt.Fprintf(os.Stderr, "\t- executing post-upload command: " + strings.Join(secret.Action, " "))
+				fmt.Fprintf(os.Stderr, "\t- executing post-upload command: "+strings.Join(secret.Action, " "))
 				// Errors from secret actions will be printed on screen, but we won't stop the flow if they fail
 				ctx.CmdInteractive(host, timeout, secret.Action...)
 			}
