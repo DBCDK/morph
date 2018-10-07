@@ -7,6 +7,28 @@ import (
 	"os"
 )
 
+type SecretError struct {
+	Err		error
+	Fatal	bool
+}
+
+func wrap(err error) *SecretError {
+	return &SecretError{
+		Err: err,
+	}
+}
+
+func wrapNonFatal(err error) *SecretError {
+	return &SecretError{
+		Err: err,
+		Fatal: false,
+	}
+}
+
+func (e SecretError) Error() string {
+	return e.Err.Error()
+}
+
 func GetSecretSize(secret nix.Secret, deploymentWD string) (size int64, err error) {
 	fh, err := os.Open(utils.GetAbsPathRelativeTo(secret.Source, deploymentWD))
 	if err != nil {
@@ -21,31 +43,33 @@ func GetSecretSize(secret nix.Secret, deploymentWD string) (size int64, err erro
 	return fStats.Size(), nil
 }
 
-func UploadSecret(ctx ssh.Context, host nix.Host, secret nix.Secret, deploymentWD string) (err error) {
+func UploadSecret(ctx ssh.Context, host nix.Host, secret nix.Secret, deploymentWD string) *SecretError {
+	var partialErr *SecretError
+
 	tempPath, err := ctx.MakeTempFile(host)
 	if err != nil {
-		return err
+		return wrap(err)
 	}
 
 	err = ctx.UploadFile(host, utils.GetAbsPathRelativeTo(secret.Source, deploymentWD), tempPath)
 	if err != nil {
-		return err
+		return wrap(err)
 	}
 
 	err = ctx.MoveFile(host, tempPath, secret.Destination)
 	if err != nil {
-		return err
+		return wrap(err)
 	}
 
 	err = ctx.SetOwner(host, secret.Destination, secret.Owner.User, secret.Owner.Group)
 	if err != nil {
-		return err
+		partialErr = wrapNonFatal(err)
 	}
 
 	err = ctx.SetPermissions(host, secret.Destination, secret.Permissions)
 	if err != nil {
-		return nil
+		partialErr = wrapNonFatal(err)
 	}
 
-	return nil
+	return partialErr
 }
