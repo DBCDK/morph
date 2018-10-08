@@ -245,8 +245,7 @@ func (ctx *SSHContext) MoveFile(host nix.Host, source string, destination string
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error on remote host %s:\nCouldn't move file: %s -> %s\n\nOriginal error:\n%s",
-			nix.GetHostname(host), source, destination, string(data),
+			"\tCouldn't move file: %s -> %s:\n\t%s", source, destination, string(data),
 		)
 		return errors.New(errorMessage)
 	}
@@ -263,8 +262,7 @@ func (ctx *SSHContext) SetOwner(host nix.Host, path string, user string, group s
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error on remote host %s:\nCouldn't chown file: %s\n\nOriginal error:\n%s",
-			nix.GetHostname(host), path, string(data),
+			"\tCouldn't chown file: %s:\n\t%s", path, string(data),
 		)
 		return errors.New(errorMessage)
 	}
@@ -281,8 +279,7 @@ func (ctx *SSHContext) SetPermissions(host nix.Host, path string, permissions st
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error on remote host %s:\nCouldn't chmod file: %s\n\nOriginal error:\n%s",
-			nix.GetHostname(host), path, string(data),
+			"\tCouldn't chmod file: %s:\n\t%s", path, string(data),
 		)
 		return errors.New(errorMessage)
 	}

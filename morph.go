@@ -257,21 +257,22 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		}
 		fmt.Fprintln(os.Stderr)
 
-		if doActivate {
-			err = activateConfiguration(&sshContext, singleHostInList, resultPath)
-			if err != nil {
-				return "", err
-			}
-		}
-
 		if doUploadSecrets {
 			err = uploadSecrets(&sshContext, singleHostInList)
 			if err != nil {
 				return "", err
 			}
 		}
+
 		fmt.Fprintln(os.Stderr)
 		fmt.Fprintln(os.Stderr)
+
+		if doActivate {
+			err = activateConfiguration(&sshContext, singleHostInList, resultPath)
+			if err != nil {
+				return "", err
+			}
+		}
 
 		if !deploySkipHealthChecks {
 			err := healthchecks.Perform(host, timeout)
@@ -407,11 +408,16 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) error {
 				return err
 			}
 
-			err = secrets.UploadSecret(ctx, host, secret, deploymentDir)
+			secretErr := secrets.UploadSecret(ctx, host, secret, deploymentDir)
 			fmt.Fprintf(os.Stderr, "\t* %s (%d bytes).. ", secretName, secretSize)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Failed")
-				return err
+			if secretErr != nil {
+				if secretErr.Fatal {
+					fmt.Fprintln(os.Stderr, "Failed")
+					return secretErr
+				} else {
+					fmt.Fprintln(os.Stderr, "Partial")
+					fmt.Fprint(os.Stderr, secretErr.Error())
+				}
 			} else {
 				fmt.Fprintln(os.Stderr, "OK")
 			}
