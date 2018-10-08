@@ -8,8 +8,8 @@ import (
 )
 
 type SecretError struct {
-	Err		error
-	Fatal	bool
+	Err   error
+	Fatal bool
 }
 
 func wrap(err error) *SecretError {
@@ -20,7 +20,7 @@ func wrap(err error) *SecretError {
 
 func wrapNonFatal(err error) *SecretError {
 	return &SecretError{
-		Err: err,
+		Err:   err,
 		Fatal: false,
 	}
 }
