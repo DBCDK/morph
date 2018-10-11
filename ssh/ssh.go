@@ -33,6 +33,8 @@ type Host interface {
 type SSHContext struct {
 	sudoPassword       string
 	AskForSudoPassword bool
+	Username           string
+	IdentityFile       string
 }
 
 func (ctx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
@@ -46,15 +48,29 @@ func (ctx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
 		return ctx.SudoCmd(host, parts...)
 	}
 
-	cmdArgs := []string{host.GetTargetHost()}
+	cmdArgs := ctx.initialSSHArgs(host)
 	cmdArgs = append(cmdArgs, parts...)
 
 	command := exec.Command("ssh", cmdArgs...)
 	return command, nil
 }
 
-func (ctx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
+func (ctx *SSHContext) initialSSHArgs(host Host) []string {
+	args := make([]string, 0)
+	if ctx.IdentityFile != "" {
+		args = append(args, "-i")
+		args = append(args, ctx.IdentityFile)
+	}
+	if ctx.Username != "" {
+		args = append(args, ctx.Username + "@" + host.GetTargetHost())
+	} else {
+		args = append(args, host.GetTargetHost())
+	}
 
+	return args
+}
+
+func (ctx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
 	var err error
 	if parts, err = valCommand(parts); err != nil {
 		return nil, err
@@ -68,7 +84,7 @@ func (ctx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
 		}
 	}
 
-	cmdArgs := []string{host.GetTargetHost()}
+	cmdArgs := ctx.initialSSHArgs(host)
 
 	// normalize sudo
 	if parts[0] == "sudo" {
