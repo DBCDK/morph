@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"git-platform.dbc.dk/platform/morph/ssh"
 	"net/http"
-	"os/exec"
 	"time"
 )
 
@@ -20,6 +20,7 @@ type HealthChecks struct {
 }
 
 type CmdHealthCheck struct {
+	SshContext	*ssh.SSHContext
 	Description string
 	Cmd         []string
 	Period      int
@@ -53,13 +54,11 @@ func (healthCheck CmdHealthCheck) GetPeriod() int {
 }
 
 func (healthCheck CmdHealthCheck) Run(host Host) error {
-	args := []string{host.GetTargetHost()}
-	args = append(args, healthCheck.Cmd...)
-
-	cmd := exec.Command(
-		"ssh", args...,
-	)
-
+	cmd, err := healthCheck.SshContext.Cmd(host, healthCheck.Cmd...)
+	if err != nil {
+		errorMessage := fmt.Sprintf("Health check error: %s", err.Error())
+		return errors.New(errorMessage)
+	}
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		errorMessage := fmt.Sprintf("Health check error: %s", string(data))

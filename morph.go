@@ -271,7 +271,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		}
 
 		if !deploySkipHealthChecks {
-			err := healthchecks.Perform(&host, timeout)
+			err := healthchecks.Perform(sshContext, &host, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr)
 				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host health check failed.")
@@ -294,9 +294,11 @@ func createSSHContext() *ssh.SSHContext {
 }
 
 func execHealthCheck(hosts []nix.Host) error {
+	sshContext := createSSHContext()
+
 	var err error
 	for _, host := range hosts {
-		err = healthchecks.Perform(&host, timeout)
+		err = healthchecks.Perform(sshContext, &host, timeout)
 	}
 
 	if err != nil {
