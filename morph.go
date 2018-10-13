@@ -194,7 +194,7 @@ func execExecute(hosts []nix.Host) error {
 
 	for _, host := range hosts {
 		fmt.Fprintln(os.Stderr, "** "+host.Name)
-		sshContext.CmdInteractive(host, timeout, executeCommand...)
+		sshContext.CmdInteractive(&host, timeout, executeCommand...)
 		fmt.Fprintln(os.Stderr)
 	}
 
@@ -275,7 +275,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		}
 
 		if !deploySkipHealthChecks {
-			err := healthchecks.Perform(host, timeout)
+			err := healthchecks.Perform(&host, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr)
 				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host health check failed.")
@@ -283,7 +283,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			}
 		}
 
-		fmt.Fprintln(os.Stderr, "Done:", nix.GetHostname(host))
+		fmt.Fprintln(os.Stderr, "Done:", host.TargetHost)
 	}
 
 	return resultPath, nil
@@ -292,7 +292,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 func execHealthCheck(hosts []nix.Host) error {
 	var err error
 	for _, host := range hosts {
-		err = healthchecks.Perform(host, timeout)
+		err = healthchecks.Perform(&host, timeout)
 	}
 
 	if err != nil {
@@ -347,7 +347,7 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 
 	fmt.Fprintf(os.Stderr, "Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d)\n", index, nix.GetHostname(host), len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
+		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d)\n", index, host.TargetHost, len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
 	}
 	fmt.Fprintln(os.Stderr)
 
@@ -401,14 +401,14 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) error {
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir(deployment)
 	for _, host := range filteredHosts {
-		fmt.Fprintf(os.Stderr, "Uploading secrets to %s:\n", nix.GetHostname(host))
+		fmt.Fprintf(os.Stderr, "Uploading secrets to %s:\n", host.TargetHost)
 		for secretName, secret := range host.Secrets {
 			secretSize, err := secrets.GetSecretSize(secret, deploymentDir)
 			if err != nil {
 				return err
 			}
 
-			secretErr := secrets.UploadSecret(ctx, host, secret, deploymentDir)
+			secretErr := secrets.UploadSecret(ctx, &host, secret, deploymentDir)
 			fmt.Fprintf(os.Stderr, "\t* %s (%d bytes).. ", secretName, secretSize)
 			if secretErr != nil {
 				if secretErr.Fatal {
@@ -424,7 +424,7 @@ func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) error {
 			if len(secret.Action) > 0 {
 				fmt.Fprintf(os.Stderr, "\t- executing post-upload command: "+strings.Join(secret.Action, " "))
 				// Errors from secret actions will be printed on screen, but we won't stop the flow if they fail
-				ctx.CmdInteractive(host, timeout, secret.Action...)
+				ctx.CmdInteractive(&host, timeout, secret.Action...)
 			}
 		}
 	}
@@ -444,7 +444,7 @@ func activateConfiguration(ctx ssh.Context, filteredHosts []nix.Host, resultPath
 			return err
 		}
 
-		err = ctx.ActivateConfiguration(host, configuration, deploySwitchAction)
+		err = ctx.ActivateConfiguration(&host, configuration, deploySwitchAction)
 		if err != nil {
 			return err
 		}

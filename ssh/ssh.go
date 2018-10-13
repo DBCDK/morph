@@ -3,7 +3,6 @@ package ssh
 import (
 	"errors"
 	"fmt"
-	"git-platform.dbc.dk/platform/morph/nix"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
@@ -15,16 +14,20 @@ import (
 )
 
 type Context interface {
-	ActivateConfiguration(host nix.Host, configuration string, action string) error
-	MakeTempFile(host nix.Host) (path string, err error)
-	UploadFile(host nix.Host, source string, destination string) error
-	SetOwner(host nix.Host, path string, user string, group string) error
-	SetPermissions(host nix.Host, path string, permissions string) error
-	MoveFile(host nix.Host, source string, destination string) error
+	ActivateConfiguration(host Host, configuration string, action string) error
+	MakeTempFile(host Host) (path string, err error)
+	UploadFile(host Host, source string, destination string) error
+	SetOwner(host Host, path string, user string, group string) error
+	SetPermissions(host Host, path string, permissions string) error
+	MoveFile(host Host, source string, destination string) error
 
-	Cmd(host nix.Host, parts ...string) (*exec.Cmd, error)
-	SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error)
-	CmdInteractive(host nix.Host, timeout int, parts ...string)
+	Cmd(host Host, parts ...string) (*exec.Cmd, error)
+	SudoCmd(host Host, parts ...string) (*exec.Cmd, error)
+	CmdInteractive(host Host, timeout int, parts ...string)
+}
+
+type Host interface {
+	GetTargetHost() string
 }
 
 type SSHContext struct {
@@ -32,7 +35,7 @@ type SSHContext struct {
 	AskForSudoPassword bool
 }
 
-func (ctx *SSHContext) Cmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
+func (ctx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
 
 	var err error
 	if parts, err = valCommand(parts); err != nil {
@@ -43,14 +46,14 @@ func (ctx *SSHContext) Cmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
 		return ctx.SudoCmd(host, parts...)
 	}
 
-	cmdArgs := []string{nix.GetHostname(host)}
+	cmdArgs := []string{host.GetTargetHost()}
 	cmdArgs = append(cmdArgs, parts...)
 
 	command := exec.Command("ssh", cmdArgs...)
 	return command, nil
 }
 
-func (ctx *SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error) {
+func (ctx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
 
 	var err error
 	if parts, err = valCommand(parts); err != nil {
@@ -65,7 +68,7 @@ func (ctx *SSHContext) SudoCmd(host nix.Host, parts ...string) (*exec.Cmd, error
 		}
 	}
 
-	cmdArgs := []string{nix.GetHostname(host)}
+	cmdArgs := []string{host.GetTargetHost()}
 
 	// normalize sudo
 	if parts[0] == "sudo" {
@@ -102,7 +105,7 @@ func valCommand(parts []string) ([]string, error) {
 	return parts, nil
 }
 
-func (ctx *SSHContext) CmdInteractive(host nix.Host, timeout int, parts ...string) {
+func (ctx *SSHContext) CmdInteractive(host Host, timeout int, parts ...string) {
 	doneChan := make(chan bool)
 	timeoutChan := make(chan bool)
 	var cmd *exec.Cmd
@@ -160,7 +163,7 @@ func writeSudoPassword(cmd *exec.Cmd, sudoPasswd string) (err error) {
 	return nil
 }
 
-func (ctx *SSHContext) ActivateConfiguration(host nix.Host, configuration string, action string) error {
+func (ctx *SSHContext) ActivateConfiguration(host Host, configuration string, action string) error {
 
 	if action == "switch" || action == "boot" {
 		cmd, err := ctx.SudoCmd(host, "nix-env", "--profile", "/nix/var/nix/profiles/system", "--set", configuration)
@@ -201,14 +204,14 @@ func (ctx *SSHContext) ActivateConfiguration(host nix.Host, configuration string
 	return nil
 }
 
-func (ctx *SSHContext) MakeTempFile(host nix.Host) (path string, err error) {
+func (ctx *SSHContext) MakeTempFile(host Host) (path string, err error) {
 	cmd, _ := ctx.Cmd(host, "mktemp")
 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
 			"Error on remote host %s:\nCouldn't create temporary file using mktemp\n\nOriginal error:\n%s",
-			nix.GetHostname(host), string(data),
+			host.GetTargetHost(), string(data),
 		)
 		return "", errors.New(errorMessage)
 	}
@@ -218,8 +221,8 @@ func (ctx *SSHContext) MakeTempFile(host nix.Host) (path string, err error) {
 	return tempFile, nil
 }
 
-func (ctx *SSHContext) UploadFile(host nix.Host, source string, destination string) (err error) {
-	destinationAndHost := nix.GetHostname(host) + ":" + destination
+func (ctx *SSHContext) UploadFile(host Host, source string, destination string) (err error) {
+	destinationAndHost := host.GetTargetHost() + ":" + destination
 	cmd := exec.Command(
 		"scp", source, destinationAndHost,
 	)
@@ -228,7 +231,7 @@ func (ctx *SSHContext) UploadFile(host nix.Host, source string, destination stri
 	if err != nil {
 		errorMessage := fmt.Sprintf(
 			"Error on remote host %s:\nCouldn't upload file: %s -> %s\n\nOriginal error:\n%s",
-			nix.GetHostname(host), source, destinationAndHost, string(data),
+			host.GetTargetHost(), source, destinationAndHost, string(data),
 		)
 		return errors.New(errorMessage)
 	}
@@ -236,7 +239,7 @@ func (ctx *SSHContext) UploadFile(host nix.Host, source string, destination stri
 	return nil
 }
 
-func (ctx *SSHContext) MoveFile(host nix.Host, source string, destination string) (err error) {
+func (ctx *SSHContext) MoveFile(host Host, source string, destination string) (err error) {
 	cmd, err := ctx.SudoCmd(host, "mv", source, destination)
 	if err != nil {
 		return err
@@ -253,7 +256,7 @@ func (ctx *SSHContext) MoveFile(host nix.Host, source string, destination string
 	return nil
 }
 
-func (ctx *SSHContext) SetOwner(host nix.Host, path string, user string, group string) (err error) {
+func (ctx *SSHContext) SetOwner(host Host, path string, user string, group string) (err error) {
 	cmd, err := ctx.SudoCmd(host, "chown", user+":"+group, path)
 	if err != nil {
 		return err
@@ -270,7 +273,7 @@ func (ctx *SSHContext) SetOwner(host nix.Host, path string, user string, group s
 	return nil
 }
 
-func (ctx *SSHContext) SetPermissions(host nix.Host, path string, permissions string) (err error) {
+func (ctx *SSHContext) SetPermissions(host Host, path string, permissions string) (err error) {
 	cmd, err := ctx.SudoCmd(host, "chmod", permissions, path)
 	if err != nil {
 		return err
