@@ -2,140 +2,34 @@ package nix
 
 import (
 	"bytes"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"git-platform.dbc.dk/platform/morph/healthchecks"
+	"git-platform.dbc.dk/platform/morph/secrets"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"time"
 )
 
 type Host struct {
-	HealthChecks HealthChecks
+	HealthChecks healthchecks.HealthChecks
 	Name         string
 	NixosRelease string
 	TargetHost   string
-	Secrets      map[string]Secret
+	Secrets      map[string]secrets.Secret
 }
 
-type HealthChecks struct {
-	Http []HttpHealthCheck
-	Cmd  []CmdHealthCheck
+func (host *Host) GetTargetHost() string {
+	return host.TargetHost
 }
 
-type CmdHealthCheck struct {
-	Description string
-	Cmd         []string
-	Period      int
-	Timeout     int
+func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
+	return host.HealthChecks
 }
 
-type HttpHealthCheck struct {
-	Description string
-	Headers     map[string]string
-	Host        *string
-	InsecureSSL bool
-	Path        string
-	Port        int
-	Scheme      string
-	Period      int
-	Timeout     int
-}
 
-type Secret struct {
-	Source      string
-	Destination string
-	Owner       Owner
-	Permissions string
-	Action      []string
-}
-
-type Owner struct {
-	Group string
-	User  string
-}
-
-type HealthCheck interface {
-	GetDescription() string
-	GetPeriod() int
-	Run(Host) error
-}
-
-func (healthCheck CmdHealthCheck) GetDescription() string {
-	return healthCheck.Description
-}
-
-func (healthCheck CmdHealthCheck) GetPeriod() int {
-	return healthCheck.Period
-}
-
-func (healthCheck CmdHealthCheck) Run(host Host) error {
-	args := []string{GetHostname(host)}
-	args = append(args, healthCheck.Cmd...)
-
-	cmd := exec.Command(
-		"ssh", args...,
-	)
-
-	data, err := cmd.CombinedOutput()
-	if err != nil {
-		errorMessage := fmt.Sprintf("Health check error: %s", string(data))
-		return errors.New(errorMessage)
-	}
-
-	return nil
-
-}
-
-func (healthCheck HttpHealthCheck) GetDescription() string {
-	return healthCheck.Description
-}
-
-func (healthCheck HttpHealthCheck) GetPeriod() int {
-	return healthCheck.Period
-}
-
-func (healthCheck HttpHealthCheck) Run(host Host) error {
-	// use the hosts hostname if the healthCheck host is not set
-	if healthCheck.Host == nil {
-		replacementHostname := GetHostname(host)
-		healthCheck.Host = &replacementHostname
-	}
-
-	transport := &http.Transport{}
-
-	transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: healthCheck.InsecureSSL}
-
-	client := &http.Client{
-		Timeout:   time.Duration(healthCheck.Timeout) * time.Second,
-		Transport: transport,
-	}
-
-	url := fmt.Sprintf("%s://%s:%d%s", healthCheck.Scheme, *healthCheck.Host, healthCheck.Port, healthCheck.Path)
-	req, err := http.NewRequest("GET", url, nil)
-
-	for headerKey, headerValue := range healthCheck.Headers {
-		req.Header.Add(headerKey, headerValue)
-	}
-
-	resp, err := client.Get(url)
-
-	if err != nil {
-		return err
-	}
-
-	resp.Body.Close()
-
-	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-		return nil
-	} else {
-		return errors.New(fmt.Sprintf("Got non 2xx status code (%s)", resp.Status))
-	}
-}
 
 func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err error) {
 	cmd := exec.Command(
@@ -256,16 +150,4 @@ func Push(host Host, paths ...string) (err error) {
 	}
 
 	return nil
-}
-
-func GetHostname(host Host) string {
-	return host.TargetHost
-}
-
-func GetHostnames(hosts []Host) (hostnames []string) {
-	for _, host := range hosts {
-		hostnames = append(hostnames, GetHostname(host))
-	}
-
-	return
 }

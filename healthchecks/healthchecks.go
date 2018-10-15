@@ -3,21 +3,20 @@ package healthchecks
 import (
 	"errors"
 	"fmt"
-	"git-platform.dbc.dk/platform/morph/nix"
 	"os"
 	"sync"
 	"time"
 )
 
-func Perform(host nix.Host, timeout int) (err error) {
-	fmt.Fprintf(os.Stderr, "Running healthchecks on %s:\n", nix.GetHostname(host))
+func Perform(host Host, timeout int) (err error) {
+	fmt.Fprintf(os.Stderr, "Running healthchecks on %s:\n", host.GetTargetHost())
 
 	wg := sync.WaitGroup{}
-	for _, healthCheck := range host.HealthChecks.Cmd {
+	for _, healthCheck := range host.GetHealthChecks().Cmd {
 		wg.Add(1)
 		go runCheckUntilSuccess(host, healthCheck, &wg)
 	}
-	for _, healthCheck := range host.HealthChecks.Http {
+	for _, healthCheck := range host.GetHealthChecks().Http {
 		wg.Add(1)
 		go runCheckUntilSuccess(host, healthCheck, &wg)
 	}
@@ -54,7 +53,7 @@ func Perform(host nix.Host, timeout int) (err error) {
 	return nil
 }
 
-func runCheckUntilSuccess(host nix.Host, healthCheck nix.HealthCheck, wg *sync.WaitGroup) {
+func runCheckUntilSuccess(host Host, healthCheck HealthCheck, wg *sync.WaitGroup) {
 	for {
 		err := healthCheck.Run(host)
 		if err == nil {

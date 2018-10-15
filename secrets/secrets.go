@@ -1,7 +1,6 @@
 package secrets
 
 import (
-	"git-platform.dbc.dk/platform/morph/nix"
 	"git-platform.dbc.dk/platform/morph/ssh"
 	"git-platform.dbc.dk/platform/morph/utils"
 	"os"
@@ -29,7 +28,7 @@ func (e SecretError) Error() string {
 	return e.Err.Error()
 }
 
-func GetSecretSize(secret nix.Secret, deploymentWD string) (size int64, err error) {
+func GetSecretSize(secret Secret, deploymentWD string) (size int64, err error) {
 	fh, err := os.Open(utils.GetAbsPathRelativeTo(secret.Source, deploymentWD))
 	if err != nil {
 		return size, err
@@ -43,7 +42,7 @@ func GetSecretSize(secret nix.Secret, deploymentWD string) (size int64, err erro
 	return fStats.Size(), nil
 }
 
-func UploadSecret(ctx ssh.Context, host nix.Host, secret nix.Secret, deploymentWD string) *SecretError {
+func UploadSecret(ctx ssh.Context, host ssh.Host, secret Secret, deploymentWD string) *SecretError {
 	var partialErr *SecretError
 
 	tempPath, err := ctx.MakeTempFile(host)
