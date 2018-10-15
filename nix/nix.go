@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"git-platform.dbc.dk/platform/morph/healthchecks"
 	"git-platform.dbc.dk/platform/morph/secrets"
+	"git-platform.dbc.dk/platform/morph/ssh"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -132,12 +133,21 @@ func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
 	return paths, nil
 }
 
-func Push(host Host, paths ...string) (err error) {
+func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
+	var userArg = ""
+	var keyArg = ""
+	if ctx.Username != "" {
+		userArg = ctx.Username + "@"
+	}
+	if ctx.IdentityFile != "" {
+		keyArg = "?ssh-key=" + ctx.IdentityFile
+	}
+
 	for _, path := range paths {
 		cmd := exec.Command(
 			"nix", "copy",
 			path,
-			"--to", "ssh://"+host.TargetHost,
+			"--to", "ssh://"+userArg+host.TargetHost+keyArg,
 		)
 
 		cmd.Stdout = os.Stderr

@@ -3,17 +3,19 @@ package healthchecks
 import (
 	"errors"
 	"fmt"
+	"git-platform.dbc.dk/platform/morph/ssh"
 	"os"
 	"sync"
 	"time"
 )
 
-func Perform(host Host, timeout int) (err error) {
+func Perform(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
 	fmt.Fprintf(os.Stderr, "Running healthchecks on %s:\n", host.GetTargetHost())
 
 	wg := sync.WaitGroup{}
 	for _, healthCheck := range host.GetHealthChecks().Cmd {
 		wg.Add(1)
+		healthCheck.SshContext = sshContext
 		go runCheckUntilSuccess(host, healthCheck, &wg)
 	}
 	for _, healthCheck := range host.GetHealthChecks().Http {

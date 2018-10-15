@@ -188,9 +188,7 @@ func handleError(cmd string, hosts []nix.Host, err error) {
 }
 
 func execExecute(hosts []nix.Host) error {
-	sshContext := ssh.SSHContext{
-		AskForSudoPassword: askForSudoPasswd,
-	}
+	sshContext := createSSHContext()
 
 	for _, host := range hosts {
 		fmt.Fprintln(os.Stderr, "** "+host.Name)
@@ -215,7 +213,7 @@ func execPush(hosts []nix.Host) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return resultPath, pushPaths(hosts, resultPath)
+	return resultPath, pushPaths(createSSHContext(), hosts, resultPath)
 }
 
 func execDeploy(hosts []nix.Host) (string, error) {
@@ -242,15 +240,13 @@ func execDeploy(hosts []nix.Host) (string, error) {
 
 	fmt.Fprintln(os.Stderr)
 
-	sshContext := ssh.SSHContext{
-		AskForSudoPassword: askForSudoPasswd,
-	}
+	sshContext := createSSHContext()
 
 	for _, host := range hosts {
 		singleHostInList := []nix.Host{host}
 
 		if doPush {
-			err = pushPaths(singleHostInList, resultPath)
+			err = pushPaths(sshContext, singleHostInList, resultPath)
 			if err != nil {
 				return "", err
 			}
@@ -258,7 +254,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		fmt.Fprintln(os.Stderr)
 
 		if doUploadSecrets {
-			err = uploadSecrets(&sshContext, singleHostInList)
+			err = uploadSecrets(sshContext, singleHostInList)
 			if err != nil {
 				return "", err
 			}
@@ -268,14 +264,14 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		fmt.Fprintln(os.Stderr)
 
 		if doActivate {
-			err = activateConfiguration(&sshContext, singleHostInList, resultPath)
+			err = activateConfiguration(sshContext, singleHostInList, resultPath)
 			if err != nil {
 				return "", err
 			}
 		}
 
 		if !deploySkipHealthChecks {
-			err := healthchecks.Perform(&host, timeout)
+			err := healthchecks.Perform(sshContext, &host, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr)
 				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host health check failed.")
@@ -289,10 +285,20 @@ func execDeploy(hosts []nix.Host) (string, error) {
 	return resultPath, nil
 }
 
+func createSSHContext() *ssh.SSHContext {
+	return &ssh.SSHContext{
+		AskForSudoPassword: askForSudoPasswd,
+		IdentityFile: os.Getenv("SSH_IDENTITY_FILE"),
+		Username: os.Getenv("SSH_USER"),
+	}
+}
+
 func execHealthCheck(hosts []nix.Host) error {
+	sshContext := createSSHContext()
+
 	var err error
 	for _, host := range hosts {
-		err = healthchecks.Perform(&host, timeout)
+		err = healthchecks.Perform(sshContext, &host, timeout)
 	}
 
 	if err != nil {
@@ -377,7 +383,7 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 	return
 }
 
-func pushPaths(filteredHosts []nix.Host, resultPath string) error {
+func pushPaths(sshContext *ssh.SSHContext, filteredHosts []nix.Host, resultPath string) error {
 	for _, host := range filteredHosts {
 		paths, err := nix.GetPathsToPush(host, resultPath)
 		if err != nil {
@@ -387,7 +393,7 @@ func pushPaths(filteredHosts []nix.Host, resultPath string) error {
 		for _, path := range paths {
 			fmt.Fprintf(os.Stderr, "\t* %s\n", path)
 		}
-		err = nix.Push(host, paths...)
+		err = nix.Push(sshContext, host, paths...)
 		if err != nil {
 			return err
 		}
