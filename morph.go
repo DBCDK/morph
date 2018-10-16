@@ -20,24 +20,25 @@ import (
 var switchActions = []string{"dry-activate", "test", "switch", "boot"}
 
 var (
-	app                    = kingpin.New("morph", "NixOS host manager").Version("1.0")
-	dryRun                 = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
-	selectGlob             string
-	selectEvery            int
-	selectSkip             int
-	selectLimit            int
-	deployment             string
-	timeout                int
-	askForSudoPasswd       bool
-	nixBuildArg            []string
-	build                  = buildCmd(app.Command("build", "Build machines"))
-	push                   = pushCmd(app.Command("push", "Push machines"))
-	deploy                 = deployCmd(app.Command("deploy", "Deploy machines"))
-	deploySwitchAction     string
-	deploySkipHealthChecks bool
-	healthCheck            = healthCheckCmd(app.Command("check-health", "Run health checks"))
-	execute                = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
-	executeCommand         []string
+	app                = kingpin.New("morph", "NixOS host manager").Version("1.0")
+	dryRun             = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
+	selectGlob         string
+	selectEvery        int
+	selectSkip         int
+	selectLimit        int
+	deployment         string
+	timeout            int
+	askForSudoPasswd   bool
+	nixBuildArg        []string
+	build              = buildCmd(app.Command("build", "Build machines"))
+	push               = pushCmd(app.Command("push", "Push machines"))
+	deploy             = deployCmd(app.Command("deploy", "Deploy machines"))
+	deploySwitchAction string
+	skipHealthChecks   bool
+	healthCheck        = healthCheckCmd(app.Command("check-health", "Run health checks"))
+	uploadSecrets      = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
+	execute            = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
+	executeCommand     []string
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
 	assetRoot, assetsErr = assets.Setup()
@@ -86,6 +87,13 @@ func nixBuildArgFlag(cmd *kingpin.CmdClause) {
 		StringsVar(&nixBuildArg)
 }
 
+func skipHealthChecksFlag(cmd *kingpin.CmdClause) {
+	cmd.
+		Flag("skip-health-checks", "Whether to skip all health checks").
+		Default("False").
+		BoolVar(&skipHealthChecks)
+}
+
 func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	nixBuildArgFlag(cmd)
@@ -118,10 +126,7 @@ func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	deploymentArg(cmd)
 	timeoutFlag(cmd)
 	askForSudoPasswdFlag(cmd)
-	cmd.
-		Flag("skip-health-checks", "Whether to skip all health checks").
-		Default("False").
-		BoolVar(&deploySkipHealthChecks)
+	skipHealthChecksFlag(cmd)
 	cmd.
 		Arg("switch-action", "Either of "+strings.Join(switchActions, "|")).
 		Required().
@@ -134,6 +139,14 @@ func healthCheckCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	deploymentArg(cmd)
 	timeoutFlag(cmd)
+	return cmd
+}
+
+func uploadSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	selectorFlags(cmd)
+	askForSudoPasswdFlag(cmd)
+	skipHealthChecksFlag(cmd)
+	deploymentArg(cmd)
 	return cmd
 }
 
@@ -170,6 +183,8 @@ func main() {
 		_, err = execDeploy(hosts)
 	case healthCheck.FullCommand():
 		err = execHealthCheck(hosts)
+	case uploadSecrets.FullCommand():
+		err = execUploadSecrets(createSSHContext(), hosts)
 	case execute.FullCommand():
 		err = execExecute(hosts)
 	}
@@ -265,7 +280,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		fmt.Fprintln(os.Stderr)
 
 		if doUploadSecrets {
-			err = uploadSecrets(sshContext, singleHostInList)
+			err = execUploadSecrets(sshContext, singleHostInList)
 			if err != nil {
 				return "", err
 			}
@@ -281,7 +296,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			}
 		}
 
-		if !deploySkipHealthChecks {
+		if !skipHealthChecks {
 			err := healthchecks.Perform(sshContext, &host, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr)
@@ -321,6 +336,28 @@ func execHealthCheck(hosts []nix.Host) error {
 	}
 
 	return err
+}
+
+func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host) error {
+	for _, host := range hosts {
+		singleHostInList := []nix.Host{host}
+
+		err := secretsUpload(sshContext, singleHostInList)
+		if err != nil {
+			return err
+		}
+
+		if !skipHealthChecks {
+			err = healthchecks.Perform(sshContext, &host, timeout)
+			if err != nil {
+				fmt.Fprintln(os.Stderr)
+				fmt.Fprintln(os.Stderr, "Not uploading to additional hosts, since a host health check failed.")
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func validateEnvironment() (err error) {
@@ -422,7 +459,7 @@ func pushPaths(sshContext *ssh.SSHContext, filteredHosts []nix.Host, resultPath 
 	return nil
 }
 
-func uploadSecrets(ctx ssh.Context, filteredHosts []nix.Host) error {
+func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host) error {
 	// upload secrets
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir(deployment)
