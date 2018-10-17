@@ -20,6 +20,7 @@ type Host struct {
 	NixosRelease string
 	TargetHost   string
 	Secrets      map[string]secrets.Secret
+	BuildOnly    bool
 }
 
 func (host *Host) GetTargetHost() string {
@@ -29,8 +30,6 @@ func (host *Host) GetTargetHost() string {
 func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
 	return host.HealthChecks
 }
-
-
 
 func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err error) {
 	cmd := exec.Command(

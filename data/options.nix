@@ -146,9 +146,20 @@ cmdHealthCheckType = types.submodule ({ ... }: {
 in
 {
   options.deployment = {
-    
+
     targetHost = mkOption {
       type = str;
+    };
+
+    buildOnly = mkOption {
+      type = bool;
+      default = false;
+      description = ''
+        Set to true if the host will not be real or reachable.
+        This is useful for system configs used to build iso's, local testing etc.
+        Will make the following features unavailable for the host:
+          push, deploy, check-health, upload-secrets, exec
+      '';
     };
 
     secrets = mkOption {
