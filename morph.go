@@ -20,26 +20,26 @@ import (
 var switchActions = []string{"dry-activate", "test", "switch", "boot"}
 
 var (
-	app                    = kingpin.New("morph", "NixOS host manager").Version("1.0")
-	dryRun                 = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
-	selectGlob             string
-	selectEvery            int
-	selectSkip             int
-	selectLimit            int
-	deployment             string
-	timeout                int
-	askForSudoPasswd       bool
-	nixBuildArg            []string
-	build                  = buildCmd(app.Command("build", "Build machines"))
-	push                   = pushCmd(app.Command("push", "Push machines"))
-	deploy                 = deployCmd(app.Command("deploy", "Deploy machines"))
-	deploySwitchAction     string
-	deployUploadSecrets    bool
-	skipHealthChecks	   bool
-	healthCheck            = healthCheckCmd(app.Command("check-health", "Run health checks"))
-	uploadSecrets          = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
-	execute                = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
-	executeCommand         []string
+	app                 = kingpin.New("morph", "NixOS host manager").Version("1.0")
+	dryRun              = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
+	selectGlob          string
+	selectEvery         int
+	selectSkip          int
+	selectLimit         int
+	deployment          string
+	timeout             int
+	askForSudoPasswd    bool
+	nixBuildArg         []string
+	build               = buildCmd(app.Command("build", "Build machines"))
+	push                = pushCmd(app.Command("push", "Push machines"))
+	deploy              = deployCmd(app.Command("deploy", "Deploy machines"))
+	deploySwitchAction  string
+	deployUploadSecrets bool
+	skipHealthChecks    bool
+	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
+	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
+	execute             = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
+	executeCommand      []string
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
 	assetRoot, assetsErr = assets.Setup()
