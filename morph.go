@@ -191,6 +191,10 @@ func execExecute(hosts []nix.Host) error {
 	sshContext := createSSHContext()
 
 	for _, host := range hosts {
+		if host.BuildOnly {
+			fmt.Fprintf(os.Stderr, "Exec is disabled for build-only host: %s\n", host.TargetHost)
+			continue
+		}
 		fmt.Fprintln(os.Stderr, "** "+host.Name)
 		sshContext.CmdInteractive(&host, timeout, executeCommand...)
 		fmt.Fprintln(os.Stderr)
@@ -213,6 +217,8 @@ func execPush(hosts []nix.Host) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	fmt.Fprintln(os.Stderr)
 	return resultPath, pushPaths(createSSHContext(), hosts, resultPath)
 }
 
@@ -243,6 +249,11 @@ func execDeploy(hosts []nix.Host) (string, error) {
 	sshContext := createSSHContext()
 
 	for _, host := range hosts {
+		if host.BuildOnly {
+			fmt.Fprintf(os.Stderr, "Deployment steps are disabled for build-only host: %s\n", host.TargetHost)
+			continue
+		}
+
 		singleHostInList := []nix.Host{host}
 
 		if doPush {
@@ -288,8 +299,8 @@ func execDeploy(hosts []nix.Host) (string, error) {
 func createSSHContext() *ssh.SSHContext {
 	return &ssh.SSHContext{
 		AskForSudoPassword: askForSudoPasswd,
-		IdentityFile: os.Getenv("SSH_IDENTITY_FILE"),
-		Username: os.Getenv("SSH_USER"),
+		IdentityFile:       os.Getenv("SSH_IDENTITY_FILE"),
+		Username:           os.Getenv("SSH_USER"),
 	}
 }
 
@@ -298,6 +309,10 @@ func execHealthCheck(hosts []nix.Host) error {
 
 	var err error
 	for _, host := range hosts {
+		if host.BuildOnly {
+			fmt.Fprintf(os.Stderr, "Healthchecks are disabled for build-only host: %s\n", host.TargetHost)
+			continue
+		}
 		err = healthchecks.Perform(sshContext, &host, timeout)
 	}
 
@@ -385,6 +400,11 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 
 func pushPaths(sshContext *ssh.SSHContext, filteredHosts []nix.Host, resultPath string) error {
 	for _, host := range filteredHosts {
+		if host.BuildOnly {
+			fmt.Fprintf(os.Stderr, "Push is disabled for build-only host: %s\n", host.TargetHost)
+			continue
+		}
+
 		paths, err := nix.GetPathsToPush(host, resultPath)
 		if err != nil {
 			return err
