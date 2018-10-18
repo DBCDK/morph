@@ -340,6 +340,10 @@ func execHealthCheck(hosts []nix.Host) error {
 
 func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host) error {
 	for _, host := range hosts {
+		if host.BuildOnly {
+			fmt.Fprintf(os.Stderr, "Secret upload is disabled for build-only host: %s\n", host.TargetHost)
+			continue
+		}
 		singleHostInList := []nix.Host{host}
 
 		err := secretsUpload(sshContext, singleHostInList)
