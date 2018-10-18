@@ -1,2 +1,2 @@
 build:
-  script: /nix/store/ik6b9k2kxvzhpsw4nbjgrh4fbywprvh6-nix-2.0.4/bin/nix-shell --run 'make-build'
+  script: nix-shell --run 'make-build'

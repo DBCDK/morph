@@ -37,7 +37,7 @@ let
 
     outpath="$(readlink -f ${packagingOut})/deps.nix"
 
-    ${nix}/bin/nix-build -E 'with import <nixpkgs> {};
+    ${nixWrapped}/bin/nix-build -E 'with import <nixpkgs> {};
       callPackage ./nix-packaging/default.nix {}' $@
 
     make-env
