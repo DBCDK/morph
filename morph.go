@@ -473,7 +473,7 @@ func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host) error {
 	deploymentDir := filepath.Dir(deployment)
 	for _, host := range filteredHosts {
 		fmt.Fprintf(os.Stderr, "Uploading secrets to %s:\n", host.TargetHost)
-		postUploadActions := make([][]string, 0)
+		postUploadActions := make(map[string][]string, 0)
 		for secretName, secret := range host.Secrets {
 			secretSize, err := secrets.GetSecretSize(secret, deploymentDir)
 			if err != nil {
@@ -494,7 +494,8 @@ func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host) error {
 				fmt.Fprintln(os.Stderr, "OK")
 			}
 			if len(secret.Action) > 0 {
-				postUploadActions = append(postUploadActions, secret.Action)
+				// ensure each action is only run once
+				postUploadActions[strings.Join(secret.Action, " ")] = secret.Action
 			}
 		}
 		// Execute post-upload secret actions one-by-one after all secrets have been uploaded
