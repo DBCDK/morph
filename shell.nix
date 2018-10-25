@@ -37,20 +37,11 @@ let
 
     outpath="$(readlink -f ${packagingOut})/deps.nix"
 
-    ${nixWrapped}/bin/nix-build -E 'with import <nixpkgs> {};
+    ${nix}/bin/nix-build -E 'with import <nixpkgs> {};
       callPackage ./nix-packaging/default.nix {}' -A bin $@
 
     make-env
   '';
-
-  nixWrapped = runCommand "nix" { buildInputs = [ makeWrapper ]; } ''
-      mkdir -p $out/bin
-      makeWrapper ${nix}/bin/nix-build $out/bin/nix-build \
-        --add-flags "--option extra-substituters 'https://nix-cache.dbc.dk/'" \
-        --add-flags "--option require-sigs true"
-
-      cp ${nix}/bin/nix $out/bin/nix
-    '';
 in
   # Change to mkShell once that hits stable!
   stdenv.mkDerivation {
@@ -62,8 +53,8 @@ in
      makeEnv
      makeDeps
      makeBuild
+     nix
      nix-prefetch-git
-     nixWrapped
      openssh
     ];
 
