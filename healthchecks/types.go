@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"git-platform.dbc.dk/platform/morph/ssh"
+	"github.com/dbcdk/morph/ssh"
 	"net/http"
 	"time"
 )
