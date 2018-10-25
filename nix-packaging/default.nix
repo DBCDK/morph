@@ -27,6 +27,13 @@ buildGoPackage rec {
     go-bindata -pkg assets -o assets/assets.go data/
   '';
 
+  postInstall = ''
+    mkdir -p $lib
+    cp -v $src/data/*.nix $lib
+  '';
+
+  outputs = [ "out" "bin" "lib" ];
+
   meta = {
     homepage = "https://git-platform.dbc.dk/platform/morph";
     description = "Morph is a NixOS host manager written in GOLANG inspired the Haskell nixdeploy project.";
