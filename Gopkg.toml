@@ -35,7 +35,7 @@
 
 [[constraint]]
   branch = "morph"
-  name = "github.com/DBCDK/kingpin"
+  name = "github.com/dbcdk/kingpin"
 
 [prune]
   go-tests = true

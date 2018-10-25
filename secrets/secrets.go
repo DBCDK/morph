@@ -1,8 +1,8 @@
 package secrets
 
 import (
-	"git-platform.dbc.dk/platform/morph/ssh"
-	"git-platform.dbc.dk/platform/morph/utils"
+	"github.com/dbcdk/morph/ssh"
+	"github.com/dbcdk/morph/utils"
 	"os"
 )
 
