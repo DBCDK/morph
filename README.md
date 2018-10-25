@@ -1,3 +1,9 @@
+# Morph
+
+Morph is a tool for managing existing NixOS hosts -- basically a fancy wrapper around `nix-build`, `nix copy`, `nix-env`, `/nix/store/.../bin/switch-to-configuration`, `scp` and more.
+
+The input is hosts defined in a manner similar to what is known from NixOps.
+
 
 ## Nix shell
 
@@ -27,3 +33,12 @@ $ `nix-shell`
 $ `make-build`
 
 After successful build, `make-build` automatically invokes `make-env` to install the morph bin on the PATH of your nix-shell instance. Subsequently, it sources the morph bash-completion script to allow for completion of morph cli args and flags.
+
+
+## About the project
+
+We needed a tool for managing our NixOS servers, and ended up writing one ourself. This is it. We use it on a daily basis to build and deploy our NixOS fleet, and when we need a feature we add it.
+
+Morph is by no means done. The CLI UI might (and probably will) change once in a while.
+The code is written by humans with an itch to scratch, and we're discussing a complete rewrite (so feel free to complain about the source code since we don't like it either).
+It probably wont accidentally switch your local machine, so you should totally try it out, but do consider pinning to a specific git revision.
