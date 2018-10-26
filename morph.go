@@ -3,18 +3,19 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/dbcdk/kingpin"
 	"github.com/dbcdk/morph/assets"
 	"github.com/dbcdk/morph/filter"
 	"github.com/dbcdk/morph/healthchecks"
 	"github.com/dbcdk/morph/nix"
 	"github.com/dbcdk/morph/secrets"
 	"github.com/dbcdk/morph/ssh"
-	"github.com/dbcdk/kingpin"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 var switchActions = []string{"dry-activate", "test", "switch", "boot"}
@@ -35,6 +36,7 @@ var (
 	deploy              = deployCmd(app.Command("deploy", "Deploy machines"))
 	deploySwitchAction  string
 	deployUploadSecrets bool
+	deployReboot		bool
 	skipHealthChecks    bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
@@ -128,6 +130,10 @@ func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		Flag("upload-secrets", "Upload secrets as part of the host deployment").
 		Default("False").
 		BoolVar(&deployUploadSecrets)
+	cmd.
+		Flag("reboot", "Reboots the host after system activation, but before healthchecks as executed.").
+		Default("False").
+		BoolVar(&deployReboot)
 	cmd.
 		Arg("switch-action", "Either of "+strings.Join(switchActions, "|")).
 		Required().
@@ -298,6 +304,28 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			if err != nil {
 				return "", err
 			}
+		}
+
+		if deployReboot {
+			if cmd, err := sshContext.Cmd(&host, "sudo", "reboot"); cmd != nil {
+				fmt.Fprint(os.Stderr, "Asking host to reboot ... ")
+				if err = cmd.Run(); err != nil {
+					// Here we assume that exit code 255 means: "SSH connection got disconnected",
+					// which is OK for a reboot - sshd may close active connections before we disconnect after all
+					if exitErr, ok := err.(*exec.ExitError); ok {
+						if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 255 {
+							fmt.Fprintln(os.Stderr, "Remote host disconnected.")
+							err = nil
+						}
+					}
+				}
+			}
+
+			if err != nil {
+				return "", err
+			}
+
+			fmt.Fprintln(os.Stderr)
 		}
 
 		if !skipHealthChecks {
