@@ -1,7 +1,7 @@
 {
   network =  {
     pkgs = import <nixpkgs> {};
-    description = "New host probers";
+    description = "simple hosts";
   };
 
   "web01.example.com" = { config, pkgs, ... }: {
