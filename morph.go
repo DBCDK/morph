@@ -36,7 +36,7 @@ var (
 	deploy              = deployCmd(app.Command("deploy", "Deploy machines"))
 	deploySwitchAction  string
 	deployUploadSecrets bool
-	deployReboot		bool
+	deployReboot        bool
 	skipHealthChecks    bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
