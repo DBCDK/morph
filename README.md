@@ -1,15 +1,122 @@
-# Morph
+# morph
 
-Morph is a tool for managing existing NixOS hosts -- basically a fancy wrapper around `nix-build`, `nix copy`, `nix-env`, `/nix/store/.../bin/switch-to-configuration`, `scp` and more.
+Morph is a tool for managing existing NixOS hosts - basically a fancy wrapper around `nix-build`, `nix copy`, `nix-env`, `/nix/store/.../bin/switch-to-configuration`, `scp` and more.
+Morph supports updating multiple hosts in a row, and with support for health checks makes it fairly safe to do so.
 
-The input is hosts defined in a manner similar to what is known from NixOps.
+
+## Notable features
+
+* multi host support
+* health checks
+* no state
 
 
-## Nix shell
+## Installation and prerequisites
+
+Morph requires `nix` (at least v2), `ssh` and `scp` to be available on `$PATH`.
+It should work on any modern Linux distribution, but NixOS is the only one we test on.
+
+Pre-built binaries are not provided, since we install morph through an overlay.
+
+The easiest way to get morph up and running is to fork this repository and run `nix-shell --command make-build`, which should result in a store path containing the morph binary.
+Consider checking out a specific tag, or at least pin the version of morph you're using somehow.
+
+
+## Using morph
+
+All commands supports a `--help` flag. `morph --help` as of v1.0.0:
+```
+$ morph --help
+usage: morph [<flags>] <command> [<args> ...]
+
+NixOS host manager
+
+Flags:
+  --help     Show context-sensitive help (also try --help-long and --help-man).
+  --version  Show application version.
+  --dry-run  Don't do anything, just eval and print changes
+
+Commands:
+  help [<command>...]
+    Show help.
+
+  build [<flags>] <deployment>
+    Build machines
+
+  push [<flags>] <deployment>
+    Push machines
+
+  deploy [<flags>] <deployment> <switch-action>
+    Deploy machines
+
+  check-health [<flags>] <deployment>
+    Run health checks
+
+  upload-secrets [<flags>] <deployment>
+    Upload secrets
+
+  exec [<flags>] <deployment> <command>...
+    Execute arbitrary commands on machines
+```
+
+For help on other commands, run `morph <cmd> --help`.
+
+Example deployments can be found in the `examples` directory, and built as follows:
+```
+$ morph build examples/simple.nix 
+Selected 2/2 hosts (name filter:-0, limits:-0):
+	  0: db01.example.com (secrets: 0, health checks: 0)
+	  1: web01.example.com (secrets: 0, health checks: 0)
+
+<probably lots of nix-build output>
+
+/nix/store/grvny5ga2i6jdxjjbh2ipdz7h50swi1n-morph
+nix result path: 
+/nix/store/grvny5ga2i6jdxjjbh2ipdz7h50swi1n-morph
+```
+
+The result path is written twice, which is a bit silly, but the reason is that only the result path is written to stdout, and everything else (including `nix-build` output) is redirected to stderr.
+This makes it easy to use morph for scripting, e.g. if one want to build using morph and then `nix copy` the result path somewhere else.
+
+Note that `examples/simple.nix` contain two different hosts definitions, and a lot of copy paste.
+All the usual nix tricks can of course be used to avoid duplication.
+
+Hosts can be deployed with the `deploy` command as follows:
+`morph deploy examples/simple.nix` (this will fail without modifying `examples/simple.nix`).
+
+
+### Selecting/filtering hosts to build and deploy
+
+All hosts defined in a deployment file is returned to morph as a list of hosts, which can be manipulated with the following flags:
+
+- `--on glob` can be used to select hosts by name, with support for glob patterns
+- `--limit n` puts an upper limit on the number of hosts
+- `--skip n` ignore the first `n` hosts
+- `--every n` selects every n'th host, useful for e.g. selecting all even (or odd) numbered hosts
+
+(all relevant commands should already support these flags.)
+
+The ordering currently can't be changed, but should be deterministic because of nix.
+
+Most commands output a header like this:
+```
+Selected 4/17 hosts (name filter:-6, limits:-7):
+	  0: foo-p02 (secrets: 0, health checks: 1)
+	  1: foo-p05 (secrets: 0, health checks: 1)
+	  2: foo-p08 (secrets: 0, health checks: 1)
+	  3: foo-p11 (secrets: 0, health checks: 1)
+```
+
+The output is pretty self explanatory, except probably for the last bit of the first line.
+`name filter` shows the change in number of hosts after glob matching on the hosts name, and `limits` shows the change after applying `--limit`, `--skip` and `--every`.
+
+
+## Hacking morph
 
 All commands mentioned below is available in the nix-shell, if you run `nix-shell` with working dir = project root.
 
-## Go dependencies
+
+### Go dependency management
 
 Run `make-deps` in order to:
 
@@ -26,7 +133,7 @@ If you want to bump dependencies to newest commit, run `make-deps update`, this 
 
 If you make larger changes to the code base, you can delete both Gopkg.toml and Gopkg.lock and run `dep init` followed by `dep ensure` to create a fresh set of dependency tracking files. **don't forget to test** afterwards.
 
-## Building the project with pinned dependencies
+### Building the project with pinned dependencies
 
 $ `nix-shell`
 
