@@ -111,6 +111,21 @@ The output is pretty self explanatory, except probably for the last bit of the f
 `name filter` shows the change in number of hosts after glob matching on the hosts name, and `limits` shows the change after applying `--limit`, `--skip` and `--every`.
 
 
+### Health checks
+
+Morph has support for two types of health checks:
+
+* command based health checks, which are run on the target host (success defined as exit code == 0)
+* HTTP based health checks, which are run from the host Morph is running on (success defined as HTTP response codes in the 2xx range)
+
+See `examples/healthchecks.nix` for an example.
+
+There are no guarantees about the order health checks are run in, so if you need something complex you should write a script for it (e.g. using `pkgs.writeScript`).
+Health checks will be repeated until success, and the interval can be configured with the `period` option (see `data/options.nix` for details).
+
+It is currently possible to have expressions like `"test \"$(systemctl list-units --failed --no-legend --no-pager |wc -l)\" -eq 0"` (count number of failed systemd units, fail if non-zero) as the first argument in a cmd-healthcheck. This works, but is discouraged, and might break at any time.
+
+
 ## Hacking morph
 
 All commands mentioned below is available in the nix-shell, if you run `nix-shell` with working dir = project root.
