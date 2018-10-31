@@ -180,4 +180,13 @@ in
       default = {};
     };
   };
+
+  # Creates a txt-file that lists all system healthcheck commands
+  # The file will end up linked in /run/current-system along with
+  # all derived dependencies.
+  config.system.extraDependencies =
+  let
+    cmds = concatMap (h: h.cmd) config.deployment.healthChecks.cmd;
+  in
+  [ (pkgs.writeText "healthcheck-commands.txt" (concatStringsSep "\n" cmds)) ];
 }
