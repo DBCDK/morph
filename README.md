@@ -112,6 +112,16 @@ The output is pretty self explanatory, except probably for the last bit of the f
 `name filter` shows the change in number of hosts after glob matching on the hosts name, and `limits` shows the change after applying `--limit`, `--skip` and `--every`.
 
 
+### Secrets
+
+Files can be uploaded without ever ending up in the nix store, by specifying each file as a secret. This will use scp for copying a local file to the remote host.
+
+See `examples/secrets.nix` or the type definitions in `data/options.nix`.
+
+Here be dragons:
+Morph currently doesn't have support for creating the required directory structure, so uploading a file to a non-existing directory will fail.
+
+
 ### Health checks
 
 Morph has support for two types of health checks:

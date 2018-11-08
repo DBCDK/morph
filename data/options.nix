@@ -164,7 +164,15 @@ in
 
     secrets = mkOption {
       default = {};
-      example = { password.text = "foobar"; };
+      example = {
+        "nix-cache-signing-key" = {
+          source = "../secrets/very-secret.txt";
+          destination = "/var/secrets/very-secret.txt";
+          owner.user = "nginx";
+          owner.group = "root";
+          permissions = "0400"; # this is the default
+          action = ["sudo" "systemctl" "reload" "nginx.service"]; # restart nginx after uploading the secret
+        };
       type = attrsOf keyOptionsType;
       description = ''
         Attrset where each attribute describes a key to be copied via ssh
