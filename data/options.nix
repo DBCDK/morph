@@ -52,6 +52,16 @@ keyOptionsType = submodule ({ ... }: {
       type = listOf str;
       description = "Action to perform on remote host after uploading secret.";
     };
+
+    mkDirs = mkOption {
+      default = true;
+      type = bool;
+      description = ''
+        Whether to create parent directories to secret destination.
+        In particular, morph will execute `sudo mkdir -p -m 755 /path/to/secret/destination`
+        prior to moving the secret in place.
+      '';
+    };
   };
 });
 

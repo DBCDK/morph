@@ -6,6 +6,7 @@ type Secret struct {
 	Owner       Owner
 	Permissions string
 	Action      []string
+	MkDirs      bool
 }
 
 type Owner struct {

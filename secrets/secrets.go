@@ -4,6 +4,7 @@ import (
 	"github.com/dbcdk/morph/ssh"
 	"github.com/dbcdk/morph/utils"
 	"os"
+	"path/filepath"
 )
 
 type SecretError struct {
@@ -48,6 +49,12 @@ func UploadSecret(ctx ssh.Context, host ssh.Host, secret Secret, deploymentWD st
 	tempPath, err := ctx.MakeTempFile(host)
 	if err != nil {
 		return wrap(err)
+	}
+
+	if secret.MkDirs {
+		if err := ctx.MakeDirs(host, filepath.Dir(secret.Destination), true, 0755); err != nil {
+			return wrap(err)
+		}
 	}
 
 	err = ctx.UploadFile(host, utils.GetAbsPathRelativeTo(secret.Source, deploymentWD), tempPath)
