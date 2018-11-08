@@ -20,6 +20,7 @@ type Context interface {
 	SetOwner(host Host, path string, user string, group string) error
 	SetPermissions(host Host, path string, permissions string) error
 	MoveFile(host Host, source string, destination string) error
+	MakeDirs(host Host, path string, parents bool, mode os.FileMode) error
 
 	Cmd(host Host, parts ...string) (*exec.Cmd, error)
 	SudoCmd(host Host, parts ...string) (*exec.Cmd, error)
@@ -254,6 +255,34 @@ func (ctx *SSHContext) UploadFile(host Host, source string, destination string) 
 
 	return nil
 }
+
+func (ctx *SSHContext) MakeDirs(host Host, path string, parents bool, mode os.FileMode) (err error) {
+
+	parts := make([]string, 0)
+	parts = append(parts, "mkdir")
+	if parents {
+		parts = append(parts, "-p")
+	}
+	parts = append(parts, "-m")
+	parts = append(parts, fmt.Sprintf("%o", mode.Perm()))
+	parts = append(parts, path)
+
+	cmd, err := ctx.SudoCmd(host, parts...)
+	if err != nil {
+		return err
+	}
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		errorMessage := fmt.Sprintf(
+			"\tCouldn't make directories: %s, on remote host. Error: %s", path, string(data),
+		)
+		return errors.New(errorMessage)
+	}
+
+	return nil
+}
+
 
 func (ctx *SSHContext) MoveFile(host Host, source string, destination string) (err error) {
 	cmd, err := ctx.SudoCmd(host, "mv", source, destination)
