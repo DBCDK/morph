@@ -118,8 +118,10 @@ Files can be uploaded without ever ending up in the nix store, by specifying eac
 
 See `examples/secrets.nix` or the type definitions in `data/options.nix`.
 
-Here be dragons:
-Morph currently doesn't have support for creating the required directory structure, so uploading a file to a non-existing directory will fail.
+*Note:*
+Morph will automatically create directories parent to `secret.Destination` if they don't exist.
+New dirs will be owned by root:root and have mode 755 (drwxr-xr-w).
+Automatic directory creation can be disabled by setting `secret.mkDirs = false`.
 
 
 ### Health checks
