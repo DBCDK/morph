@@ -173,6 +173,7 @@ in
           permissions = "0400"; # this is the default
           action = ["sudo" "systemctl" "reload" "nginx.service"]; # restart nginx after uploading the secret
         };
+      };
       type = attrsOf keyOptionsType;
       description = ''
         Attrset where each attribute describes a key to be copied via ssh
