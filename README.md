@@ -120,7 +120,7 @@ See `examples/secrets.nix` or the type definitions in `data/options.nix`.
 
 *Note:*
 Morph will automatically create directories parent to `secret.Destination` if they don't exist.
-New dirs will be owned by root:root and have mode 755 (drwxr-xr-w).
+New dirs will be owned by root:root and have mode 755 (drwxr-xr-x).
 Automatic directory creation can be disabled by setting `secret.mkDirs = false`.
 
 
