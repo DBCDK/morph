@@ -1,0 +1,17 @@
+
+set -e
+
+export NIX_REMOTE=daemon
+
+VERSION=$1
+
+case $VERSION in
+"18.09" | "unstable")
+	nix-prefetch-git --rev "refs/heads/nixos-$1" https://github.com/NixOS/nixpkgs-channels.git | jq '{url: ("https://github.com/NixOS/nixpkgs-channels/archive/" + .rev + ".tar.gz"), rev: .rev, date: .date, sha256: .sha256}' >  "./common/nixpkgs-$1.json"
+	;;
+*)
+	echo "usage: $0 <branchname>"
+	echo "view $0 to see a list of valid branch names"
+	exit 1
+	;;
+esac

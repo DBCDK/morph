@@ -1,0 +1,14 @@
+#!/usr/bin/env nix-shell
+#! nix-shell -i bash -p git -p nix-prefetch-git
+
+set -e
+
+export NIX_REMOTE=daemon
+
+if [ "$1" == "" ]; then
+	VERSION=master
+else
+	VERSION=$1
+fi
+
+nix-prefetch-git --rev "refs/heads/$VERSION" https://github.com/dbcdk/morph.git >  "./morph.json"

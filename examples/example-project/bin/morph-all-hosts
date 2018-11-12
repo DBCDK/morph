@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+if [ "${IGNORE_ERRORS}" == "" ]; then
+  set -e
+fi
+set -uo pipefail
+
+cd $(dirname "${BASH_SOURCE[0]}")
+
+EXITCODE=0
+for F in $(ls -1 ../hostgroups/*.nix); do
+  morph ${@/\{\}/$F}
+  EXITCODE=$(($? | $EXITCODE))
+done
+
+exit $EXITCODE
