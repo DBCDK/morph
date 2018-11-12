@@ -240,6 +240,15 @@ func (ctx *SSHContext) MakeTempFile(host Host) (path string, err error) {
 
 func (ctx *SSHContext) UploadFile(host Host, source string, destination string) (err error) {
 	destinationAndHost := host.GetTargetHost() + ":" + destination
+
+	parts := []string{"scp"}
+	if ctx.IdentityFile != "" {
+		parts = append(parts, "-i", ctx.IdentityFile)
+	}
+	if ctx.Username != "" {
+		destinationAndHost = ctx.Username + "@" + destinationAndHost
+	}
+
 	cmd := exec.Command(
 		"scp", source, destinationAndHost,
 	)
