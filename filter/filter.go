@@ -29,8 +29,8 @@ func FilterHosts(allHosts []nix.Host, skip int, every int, limit int) (hosts []n
 		}
 	}
 
-	// limit to $limit hosts
-	if limit > 0 {
+	// limit to $limit hosts, making sure not to go out of bounds either
+	if limit > 0 && limit < len(hosts) {
 		return hosts[:limit]
 	} else {
 		return hosts
