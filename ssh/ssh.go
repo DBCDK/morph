@@ -37,6 +37,7 @@ type SSHContext struct {
 	AskForSudoPassword bool
 	Username           string
 	IdentityFile       string
+	SkipHostKeyCheck   bool
 }
 
 func (ctx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
@@ -59,6 +60,11 @@ func (ctx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
 
 func (ctx *SSHContext) initialSSHArgs(host Host) []string {
 	args := make([]string, 0)
+	if ctx.SkipHostKeyCheck {
+		args = append(args,
+			"-o", "StrictHostkeyChecking=No",
+			"-o", "UserKnownHostsFile=/dev/null")
+	}
 	if ctx.IdentityFile != "" {
 		args = append(args, "-i")
 		args = append(args, ctx.IdentityFile)
