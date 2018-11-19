@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
@@ -224,16 +225,21 @@ func (ctx *SSHContext) ActivateConfiguration(host Host, configuration string, ac
 func (ctx *SSHContext) MakeTempFile(host Host) (path string, err error) {
 	cmd, _ := ctx.Cmd(host, "mktemp")
 
-	data, err := cmd.CombinedOutput()
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
 			"Error on remote host %s:\nCouldn't create temporary file using mktemp\n\nOriginal error:\n%s",
-			host.GetTargetHost(), string(data),
+			host.GetTargetHost(), stderr.String(),
 		)
 		return "", errors.New(errorMessage)
 	}
 
-	tempFile := strings.TrimSpace(string(data))
+	tempFile := strings.TrimSpace(stdout.String())
 
 	return tempFile, nil
 }
