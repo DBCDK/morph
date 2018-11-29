@@ -6,7 +6,6 @@ let
   pkgs    = network.network.pkgs;
   lib     = pkgs.lib;
 in
-  with pkgs;
   with lib;
 
 rec {
@@ -21,16 +20,19 @@ rec {
       in
       { name = machineName;
         value = import "${toString pkgs.path}/nixos/lib/eval-config.nix" {
-          inherit pkgs;
           modules =
             modules ++
-            [ { key = "deploy-stuff";
+            [ ({config, ... }: {
+                key = "deploy-stuff";
                 imports = [ ./options.nix ];
                 # Provide a default hostname and deployment target equal
                 # to the attribute name of the machine in the model.
                 networking.hostName = mkOverride 900 machineName;
                 deployment.targetHost = mkOverride 900 machineName;
-              }
+                nixpkgs.pkgs = mkDefault (import (toString pkgs.path) {
+                  inherit (config.nixpkgs) config overlays localSystem crossSystem;
+                });
+              })
             ];
           extraArgs = { inherit nodes ; name = machineName; };
         };
@@ -68,7 +70,7 @@ rec {
   # Phase 2: build complete machine configurations.
   machines = { names }:
     let nodes' = filterAttrs (n: v: elem n names) nodes; in
-    runCommand "morph"
+    pkgs.runCommand "morph"
       { preferLocalBuild = true; }
       ''
         mkdir -p $out
