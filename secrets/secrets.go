@@ -14,7 +14,7 @@ type SecretError struct {
 
 func wrap(err error) *SecretError {
 	return &SecretError{
-		Err: err,
+		Err:   err,
 		Fatal: true,
 	}
 }
