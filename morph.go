@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dbcdk/kingpin"
@@ -10,6 +11,7 @@ import (
 	"github.com/dbcdk/morph/nix"
 	"github.com/dbcdk/morph/secrets"
 	"github.com/dbcdk/morph/ssh"
+	"github.com/dbcdk/morph/utils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -40,6 +42,7 @@ var (
 	skipHealthChecks    bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
+	listSecrets         = listSecretsCmd(app.Command("list-secrets", "List secrets"))
 	execute             = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
 	executeCommand      []string
 
@@ -157,6 +160,12 @@ func uploadSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd
 }
 
+func listSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	selectorFlags(cmd)
+	deploymentArg(cmd)
+	return cmd
+}
+
 func init() {
 	if err := validateEnvironment(); err != nil {
 		panic(err)
@@ -192,6 +201,8 @@ func main() {
 		err = execHealthCheck(hosts)
 	case uploadSecrets.FullCommand():
 		err = execUploadSecrets(createSSHContext(), hosts)
+	case listSecrets.FullCommand():
+		err = execListSecrets(hosts)
 	case execute.FullCommand():
 		err = execExecute(hosts)
 	}
@@ -393,6 +404,35 @@ func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host) error {
 			}
 		}
 	}
+
+	return nil
+}
+
+func execListSecrets(hosts []nix.Host) error {
+	deploymentDir, err := filepath.Abs(filepath.Dir(deployment))
+	if err != nil {
+		return err
+	}
+	secretsByHost := make(map[string](map[string]secrets.Secret))
+
+	for _, host := range hosts {
+		singleHostInList := []nix.Host{host}
+		for _, host := range singleHostInList {
+			canonicalSecrets := make(map[string]secrets.Secret)
+			for name, secret := range host.Secrets {
+				sourcePath := utils.GetAbsPathRelativeTo(secret.Source, deploymentDir)
+				secret.Source = sourcePath
+				canonicalSecrets[name] = secret
+			}
+			secretsByHost[host.Name] = canonicalSecrets
+		}
+	}
+
+	jsonSecrets, err := json.MarshalIndent(secretsByHost, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "%s\n", jsonSecrets)
 
 	return nil
 }
