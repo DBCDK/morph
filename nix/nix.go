@@ -59,7 +59,7 @@ func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err 
 	return hosts, nil
 }
 
-func BuildMachines(evalMachines string, deploymentPath string, hosts []Host, nixArgs []string) (path string, err error) {
+func BuildMachines(evalMachines string, deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (path string, err error) {
 	hostsArg := "["
 	for _, host := range hosts {
 		hostsArg += "\"" + host.TargetHost + "\" "
@@ -83,6 +83,11 @@ func BuildMachines(evalMachines string, deploymentPath string, hosts []Host, nix
 
 	if len(nixArgs) > 0 {
 		args = append(args, nixArgs...)
+	}
+
+	if nixBuildTargets != "" {
+		args = append(args,
+			"--arg", "buildTargets", nixBuildTargets)
 	}
 
 	cmd := exec.Command("nix-build", args...)

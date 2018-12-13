@@ -33,6 +33,7 @@ var (
 	timeout             int
 	askForSudoPasswd    bool
 	nixBuildArg         []string
+	nixBuildTargetFile  string
 	build               = buildCmd(app.Command("build", "Build machines"))
 	push                = pushCmd(app.Command("push", "Push machines"))
 	deploy              = deployCmd(app.Command("deploy", "Deploy machines"))
@@ -88,6 +89,12 @@ func nixBuildArgFlag(cmd *kingpin.CmdClause) {
 		StringsVar(&nixBuildArg)
 }
 
+func nixBuildTargetFileFlag(cmd *kingpin.CmdClause) {
+	cmd.Flag("target-file", "File containing a Nix attribute set, defining build targets to use instead of the default").
+		HintFiles("nix").
+		ExistingFileVar(&nixBuildTargetFile)
+}
+
 func skipHealthChecksFlag(cmd *kingpin.CmdClause) {
 	cmd.
 		Flag("skip-health-checks", "Whether to skip all health checks").
@@ -98,6 +105,7 @@ func skipHealthChecksFlag(cmd *kingpin.CmdClause) {
 func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	nixBuildArgFlag(cmd)
+	nixBuildTargetFileFlag(cmd)
 	deploymentArg(cmd)
 	return cmd
 }
@@ -464,7 +472,13 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 		return
 	}
 
-	resultPath, err = nix.BuildMachines(evalMachinesPath, deploymentPath, hosts, nixBuildArg)
+	nixBuildTargets := ""
+	if nixBuildTargetFile != "" {
+		if path, err := filepath.Abs(nixBuildTargetFile); err == nil {
+			nixBuildTargets = fmt.Sprintf("import \"%s\"", path)
+		}
+	}
+	resultPath, err = nix.BuildMachines(evalMachinesPath, deploymentPath, hosts, nixBuildArg, nixBuildTargets)
 	if err != nil {
 		return
 	}
