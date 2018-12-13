@@ -66,17 +66,27 @@ rec {
   };
 
   # Phase 2: build complete machine configurations.
-  machines = { names }:
+  machines = { names, buildTargets ? null }:
     let nodes' = filterAttrs (n: v: elem n names) nodes; in
-    runCommand "morph"
+    pkgs.runCommand "morph"
       { preferLocalBuild = true; }
-      ''
+      (if buildTargets == null
+      then ''
         mkdir -p $out
-        ${toString (attrValues (mapAttrs (n: v: ''
-          ln -s ${v.config.system.build.toplevel} $out/${n}
-          ln -s ${v.config.system.build.toplevel.drvPath} $out/${n}.drv
-        '') nodes'))}
-      '';
+        ${toString (mapAttrsToList (nodeName: nodeDef: ''
+          ln -s ${nodeDef.config.system.build.toplevel} $out/${nodeName}
+          ln -s ${nodeDef.config.system.build.toplevel.drvPath} $out/${nodeName}.drv
+        '') nodes')}
+      ''
+      else ''
+        mkdir -p $out
+        ${toString (mapAttrsToList (nodeName: nodeDef: ''
+          mkdir -p $out/${nodeName}
+          ${toString (mapAttrsToList (buildName: buildFn: ''
+            ln -s ${buildFn nodeDef} $out/${nodeName}/${buildName}
+          '') buildTargets)}
+        '') nodes')}
+      '');
 
   # Function needed to calculate the nixops arguments. This should work even when arguments
   # are not set yet, so we fake arguments to be able to evaluate the require attribute of
