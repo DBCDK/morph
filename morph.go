@@ -18,10 +18,12 @@ import (
 	"syscall"
 )
 
+// This is set at build time via -ldflags magic
+var version string
 var switchActions = []string{"dry-activate", "test", "switch", "boot"}
 
 var (
-	app                 = kingpin.New("morph", "NixOS host manager").Version("1.0")
+	app                 = kingpin.New("morph", "NixOS host manager").Version(version)
 	dryRun              = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
 	selectGlob          string
 	selectEvery         int

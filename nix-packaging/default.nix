@@ -23,6 +23,12 @@ buildGoPackage rec {
   src = filterSource srcFilter ./..;
   goDeps = ./deps.nix;
 
+  buildFlagsArray = ''
+    -ldflags=
+    -X
+    main.version=${version}
+  '';
+
   prePatch = ''
     go-bindata -pkg assets -o assets/assets.go data/
   '';
