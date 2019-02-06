@@ -40,6 +40,7 @@ var (
 	skipHealthChecks    bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
+	listSecrets         = listSecretsCmd(app.Command("list-secrets", "List secrets"))
 	execute             = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
 	executeCommand      []string
 
@@ -157,6 +158,12 @@ func uploadSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd
 }
 
+func listSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	selectorFlags(cmd)
+	deploymentArg(cmd)
+	return cmd
+}
+
 func init() {
 	if err := validateEnvironment(); err != nil {
 		panic(err)
@@ -192,6 +199,8 @@ func main() {
 		err = execHealthCheck(hosts)
 	case uploadSecrets.FullCommand():
 		err = execUploadSecrets(createSSHContext(), hosts)
+	case listSecrets.FullCommand():
+		execListSecrets(hosts)
 	case execute.FullCommand():
 		err = execExecute(hosts)
 	}
@@ -395,6 +404,19 @@ func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host) error {
 	}
 
 	return nil
+}
+
+func execListSecrets(hosts []nix.Host) {
+	for _, host := range hosts {
+		singleHostInList := []nix.Host{host}
+		for _, host := range singleHostInList {
+			fmt.Fprintf(os.Stdout, "Secrets for host %s:\n", host.Name)
+			for name, secret := range host.Secrets {
+				fmt.Fprintf(os.Stdout, "%s:\n- %v\n", name, &secret)
+			}
+			fmt.Fprintf(os.Stdout, "\n")
+		}
+	}
 }
 
 func validateEnvironment() (err error) {
