@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/dbcdk/kingpin"
@@ -10,6 +11,7 @@ import (
 	"github.com/dbcdk/morph/nix"
 	"github.com/dbcdk/morph/secrets"
 	"github.com/dbcdk/morph/ssh"
+	"github.com/dbcdk/morph/utils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -41,6 +43,7 @@ var (
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
 	listSecrets         = listSecretsCmd(app.Command("list-secrets", "List secrets"))
+	asJson              bool
 	execute             = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
 	executeCommand      []string
 
@@ -92,6 +95,13 @@ func skipHealthChecksFlag(cmd *kingpin.CmdClause) {
 		Flag("skip-health-checks", "Whether to skip all health checks").
 		Default("False").
 		BoolVar(&skipHealthChecks)
+}
+
+func asJsonFlag(cmd *kingpin.CmdClause) {
+	cmd.
+		Flag("json", "Whether to format the output as JSON instead of plaintext").
+		Default("False").
+		BoolVar(&asJson)
 }
 
 func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -161,6 +171,7 @@ func uploadSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 func listSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	deploymentArg(cmd)
+	asJsonFlag(cmd)
 	return cmd
 }
 
@@ -200,7 +211,11 @@ func main() {
 	case uploadSecrets.FullCommand():
 		err = execUploadSecrets(createSSHContext(), hosts)
 	case listSecrets.FullCommand():
-		execListSecrets(hosts)
+		if asJson {
+			err = execListSecretsAsJson(hosts)
+		} else {
+			execListSecrets(hosts)
+		}
 	case execute.FullCommand():
 		err = execExecute(hosts)
 	}
@@ -417,6 +432,35 @@ func execListSecrets(hosts []nix.Host) {
 			fmt.Fprintf(os.Stdout, "\n")
 		}
 	}
+}
+
+func execListSecretsAsJson(hosts []nix.Host) error {
+	deploymentDir, err := filepath.Abs(filepath.Dir(deployment))
+	if err != nil {
+		return err
+	}
+	secretsByHost := make(map[string](map[string]secrets.Secret))
+
+	for _, host := range hosts {
+		singleHostInList := []nix.Host{host}
+		for _, host := range singleHostInList {
+			canonicalSecrets := make(map[string]secrets.Secret)
+			for name, secret := range host.Secrets {
+				sourcePath := utils.GetAbsPathRelativeTo(secret.Source, deploymentDir)
+				secret.Source = sourcePath
+				canonicalSecrets[name] = secret
+			}
+			secretsByHost[host.Name] = canonicalSecrets
+		}
+	}
+
+	jsonSecrets, err := json.MarshalIndent(secretsByHost, "", "  ")
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stdout, "%s\n", jsonSecrets)
+
+	return nil
 }
 
 func validateEnvironment() (err error) {
