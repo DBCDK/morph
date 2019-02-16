@@ -20,7 +20,7 @@ type HealthChecks struct {
 }
 
 type CmdHealthCheck struct {
-	SshContext	*ssh.SSHContext
+	SshContext  *ssh.SSHContext
 	Description string
 	Cmd         []string
 	Period      int
