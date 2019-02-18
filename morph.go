@@ -42,6 +42,7 @@ var (
 	deployUploadSecrets bool
 	deployReboot        bool
 	skipHealthChecks    bool
+	showTrace			bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
 	listSecrets         = listSecretsCmd(app.Command("list-secrets", "List secrets"))
@@ -88,7 +89,7 @@ func selectorFlags(cmd *kingpin.CmdClause) {
 }
 
 func nixBuildArgFlag(cmd *kingpin.CmdClause) {
-	cmd.Flag("build-arg", "Extra argument to pass on to nix-build command.").
+	cmd.Flag("build-arg", "Extra argument to pass on to nix-build command. **DEPRECATED**").
 		StringsVar(&nixBuildArg)
 }
 
@@ -97,6 +98,13 @@ func skipHealthChecksFlag(cmd *kingpin.CmdClause) {
 		Flag("skip-health-checks", "Whether to skip all health checks").
 		Default("False").
 		BoolVar(&skipHealthChecks)
+}
+
+func showTraceFlag(cmd *kingpin.CmdClause) {
+	cmd.
+		Flag("show-trace", "Whether to pass --show-trace to all nix commands").
+		Default("False").
+		BoolVar(&showTrace)
 }
 
 func asJsonFlag(cmd *kingpin.CmdClause) {
@@ -108,6 +116,7 @@ func asJsonFlag(cmd *kingpin.CmdClause) {
 
 func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	showTraceFlag(cmd)
 	nixBuildArgFlag(cmd)
 	deploymentArg(cmd)
 	return cmd
@@ -115,12 +124,14 @@ func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func pushCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	showTraceFlag(cmd)
 	deploymentArg(cmd)
 	return cmd
 }
 
 func executeCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	showTraceFlag(cmd)
 	askForSudoPasswdFlag(cmd)
 	timeoutFlag(cmd)
 	deploymentArg(cmd)
@@ -134,6 +145,7 @@ func executeCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	showTraceFlag(cmd)
 	nixBuildArgFlag(cmd)
 	deploymentArg(cmd)
 	timeoutFlag(cmd)
@@ -157,6 +169,7 @@ func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func healthCheckCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	showTraceFlag(cmd)
 	deploymentArg(cmd)
 	timeoutFlag(cmd)
 	return cmd
@@ -164,6 +177,7 @@ func healthCheckCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func uploadSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	showTraceFlag(cmd)
 	askForSudoPasswdFlag(cmd)
 	skipHealthChecksFlag(cmd)
 	deploymentArg(cmd)
@@ -172,6 +186,7 @@ func uploadSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func listSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
+	showTraceFlag(cmd)
 	deploymentArg(cmd)
 	asJsonFlag(cmd)
 	return cmd
@@ -195,6 +210,11 @@ func init() {
 func main() {
 
 	clause := kingpin.MustParse(app.Parse(os.Args[1:]))
+
+	//TODO: Remove deprecation warning when removing --build-arg flag
+	if len(nixBuildArg) > 0 {
+		fmt.Fprintln(os.Stderr, "Deprecation: The --build-arg flag will be removed in a future release.")
+	}
 
 	hosts, err := getHosts(deployment)
 	if err != nil {
@@ -489,14 +509,13 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 		return hosts, err
 	}
 
-	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
-
 	deploymentPath, err := filepath.Abs(deployment.Name())
 	if err != nil {
 		return hosts, err
 	}
 
-	allHosts, err := nix.GetMachines(evalMachinesPath, deploymentPath)
+	ctx := getNixContext()
+	allHosts, err := ctx.GetMachines(deploymentPath)
 	if err != nil {
 		return hosts, err
 	}
@@ -517,9 +536,14 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 	return filteredHosts, nil
 }
 
-func buildHosts(hosts []nix.Host) (resultPath string, err error) {
-	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
+func getNixContext() *nix.NixContext {
+	return &nix.NixContext{
+		EvalMachines: filepath.Join(assetRoot, "eval-machines.nix"),
+		ShowTrace: showTrace,
+	}
+}
 
+func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 	if len(hosts) == 0 {
 		err = errors.New("No hosts selected")
 		return
@@ -530,7 +554,8 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 		return
 	}
 
-	resultPath, err = nix.BuildMachines(evalMachinesPath, deploymentPath, hosts, nixBuildArg)
+	ctx := getNixContext()
+	resultPath, err = ctx.BuildMachines(deploymentPath, hosts, nixBuildArg)
 	if err != nil {
 		return
 	}

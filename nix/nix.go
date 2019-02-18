@@ -23,6 +23,11 @@ type Host struct {
 	BuildOnly    bool
 }
 
+type NixContext struct {
+	EvalMachines string
+	ShowTrace bool
+}
+
 func (host *Host) GetTargetHost() string {
 	return host.TargetHost
 }
@@ -31,13 +36,18 @@ func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
 	return host.HealthChecks
 }
 
-func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err error) {
-	cmd := exec.Command(
-		"nix", "eval",
-		"-f", evalMachines, "info.machineList",
+func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err error) {
+
+	args := []string{"eval",
+		"-f", ctx.EvalMachines, "info.machineList",
 		"--arg", "networkExpr", deploymentPath,
-		"--json",
-	)
+		"--json"}
+
+	if ctx.ShowTrace {
+		args = append(args, "--show-trace")
+	}
+
+	cmd := exec.Command("nix", args...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -59,7 +69,7 @@ func GetMachines(evalMachines string, deploymentPath string) (hosts []Host, err 
 	return hosts, nil
 }
 
-func BuildMachines(evalMachines string, deploymentPath string, hosts []Host, nixArgs []string) (path string, err error) {
+func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string) (path string, err error) {
 	hostsArg := "["
 	for _, host := range hosts {
 		hostsArg += "\"" + host.TargetHost + "\" "
@@ -75,7 +85,7 @@ func BuildMachines(evalMachines string, deploymentPath string, hosts []Host, nix
 
 	resultLinkPath := filepath.Join(tmpdir, "result")
 
-	args := []string{evalMachines,
+	args := []string{ctx.EvalMachines,
 		"-A", "machines",
 		"--arg", "networkExpr", deploymentPath,
 		"--arg", "names", hostsArg,
@@ -83,6 +93,9 @@ func BuildMachines(evalMachines string, deploymentPath string, hosts []Host, nix
 
 	if len(nixArgs) > 0 {
 		args = append(args, nixArgs...)
+	}
+	if ctx.ShowTrace {
+		args = append(args, "--show-trace")
 	}
 
 	cmd := exec.Command("nix-build", args...)
