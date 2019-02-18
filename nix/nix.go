@@ -25,7 +25,7 @@ type Host struct {
 
 type NixContext struct {
 	EvalMachines string
-	ShowTrace bool
+	ShowTrace    bool
 }
 
 func (host *Host) GetTargetHost() string {
