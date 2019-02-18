@@ -42,7 +42,7 @@ var (
 	deployUploadSecrets bool
 	deployReboot        bool
 	skipHealthChecks    bool
-	showTrace			bool
+	showTrace           bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
 	listSecrets         = listSecretsCmd(app.Command("list-secrets", "List secrets"))
@@ -539,7 +539,7 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 func getNixContext() *nix.NixContext {
 	return &nix.NixContext{
 		EvalMachines: filepath.Join(assetRoot, "eval-machines.nix"),
-		ShowTrace: showTrace,
+		ShowTrace:    showTrace,
 	}
 }
 
