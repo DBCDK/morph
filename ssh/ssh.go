@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/dbcdk/morph/utils"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
-	"time"
 )
 
 type Context interface {
@@ -154,7 +154,7 @@ func valCommand(parts []string) ([]string, error) {
 }
 
 func (sshCtx *SSHContext) CmdInteractive(host Host, timeout int, parts ...string) {
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(timeout)*time.Second)
+	ctx, cancel := utils.ContextWithConditionalTimeout(context.TODO(), timeout)
 	defer cancel()
 
 	cmd, err := sshCtx.CmdContext(ctx, host, parts...)

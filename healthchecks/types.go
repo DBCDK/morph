@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/dbcdk/morph/ssh"
+	"github.com/dbcdk/morph/utils"
 	"net/http"
 	"time"
 )
@@ -55,7 +56,7 @@ func (healthCheck CmdHealthCheck) GetPeriod() int {
 }
 
 func (healthCheck CmdHealthCheck) Run(host Host) error {
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(healthCheck.Timeout)*time.Second)
+	ctx, cancel := utils.ContextWithConditionalTimeout(context.TODO(), healthCheck.Timeout)
 	defer cancel()
 
 	cmd, err := healthCheck.SshContext.CmdContext(ctx, host, healthCheck.Cmd...)
@@ -90,6 +91,12 @@ func (healthCheck HttpHealthCheck) Run(host Host) error {
 	if healthCheck.Host == nil {
 		replacementHostname := host.GetTargetHost()
 		healthCheck.Host = &replacementHostname
+	}
+
+	// http.Client interprets a timeout of 0 as "no timeout", but we still have to avoid passing
+	// a negative timeout to it
+	if healthCheck.Timeout < 0 {
+		healthCheck.Timeout = 0
 	}
 
 	transport := &http.Transport{}
