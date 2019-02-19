@@ -1,6 +1,7 @@
 package healthchecks
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -54,12 +55,19 @@ func (healthCheck CmdHealthCheck) GetPeriod() int {
 }
 
 func (healthCheck CmdHealthCheck) Run(host Host) error {
-	cmd, err := healthCheck.SshContext.Cmd(host, healthCheck.Cmd...)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(healthCheck.Timeout)*time.Second)
+	defer cancel()
+
+	cmd, err := healthCheck.SshContext.CmdContext(ctx, host, healthCheck.Cmd...)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Health check error: %s", err.Error())
 		return errors.New(errorMessage)
 	}
 	data, err := cmd.CombinedOutput()
+	if ctx.Err() != nil {
+		errorMessage := fmt.Sprintf("Health check error: Timeout after %ds", healthCheck.Timeout)
+		return errors.New(errorMessage)
+	}
 	if err != nil {
 		errorMessage := fmt.Sprintf("Health check error: %s", string(data))
 		return errors.New(errorMessage)

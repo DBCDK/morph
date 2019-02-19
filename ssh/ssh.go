@@ -2,6 +2,7 @@ package ssh
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
@@ -45,7 +46,11 @@ type FileTransfer struct {
 	Destination string
 }
 
-func (ctx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
+func (sshCtx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
+	return sshCtx.CmdContext(context.TODO(), host, parts...)
+}
+
+func (sshCtx *SSHContext) CmdContext(ctx context.Context, host Host, parts ...string) (*exec.Cmd, error) {
 
 	var err error
 	if parts, err = valCommand(parts); err != nil {
@@ -53,13 +58,13 @@ func (ctx *SSHContext) Cmd(host Host, parts ...string) (*exec.Cmd, error) {
 	}
 
 	if parts[0] == "sudo" {
-		return ctx.SudoCmd(host, parts...)
+		return sshCtx.SudoCmdContext(ctx, host, parts...)
 	}
 
-	cmd, cmdArgs := ctx.sshArgs(host, nil)
+	cmd, cmdArgs := sshCtx.sshArgs(host, nil)
 	cmdArgs = append(cmdArgs, parts...)
 
-	command := exec.Command(cmd, cmdArgs...)
+	command := exec.CommandContext(ctx, cmd, cmdArgs...)
 	return command, nil
 }
 
@@ -93,21 +98,25 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 	return
 }
 
-func (ctx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
+func (sshCtx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
+	return sshCtx.SudoCmdContext(context.TODO(), host, parts...)
+}
+
+func (sshCtx *SSHContext) SudoCmdContext(ctx context.Context, host Host, parts ...string) (*exec.Cmd, error) {
 	var err error
 	if parts, err = valCommand(parts); err != nil {
 		return nil, err
 	}
 
 	// ask for password if not done already
-	if ctx.AskForSudoPassword && ctx.sudoPassword == "" {
-		ctx.sudoPassword, err = askForSudoPassword()
+	if sshCtx.AskForSudoPassword && sshCtx.sudoPassword == "" {
+		sshCtx.sudoPassword, err = askForSudoPassword()
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	cmd, cmdArgs := ctx.sshArgs(host, nil)
+	cmd, cmdArgs := sshCtx.sshArgs(host, nil)
 
 	// normalize sudo
 	if parts[0] == "sudo" {
@@ -115,7 +124,7 @@ func (ctx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
 	}
 	cmdArgs = append(cmdArgs, "sudo")
 
-	if ctx.sudoPassword != "" {
+	if sshCtx.sudoPassword != "" {
 		cmdArgs = append(cmdArgs, "-S")
 	} else {
 		// no password supplied; request non-interactive sudo, which will fail with an error if a password was required
@@ -125,9 +134,9 @@ func (ctx *SSHContext) SudoCmd(host Host, parts ...string) (*exec.Cmd, error) {
 	cmdArgs = append(cmdArgs, "-p", "''", "-k", "--")
 	cmdArgs = append(cmdArgs, parts...)
 
-	command := exec.Command(cmd, cmdArgs...)
-	if ctx.sudoPassword != "" {
-		err := writeSudoPassword(command, ctx.sudoPassword)
+	command := exec.CommandContext(ctx, cmd, cmdArgs...)
+	if sshCtx.sudoPassword != "" {
+		err := writeSudoPassword(command, sshCtx.sudoPassword)
 		if err != nil {
 			return nil, err
 		}
