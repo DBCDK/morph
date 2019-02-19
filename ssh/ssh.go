@@ -153,40 +153,25 @@ func valCommand(parts []string) ([]string, error) {
 	return parts, nil
 }
 
-func (ctx *SSHContext) CmdInteractive(host Host, timeout int, parts ...string) {
-	doneChan := make(chan bool)
-	timeoutChan := make(chan bool)
-	var cmd *exec.Cmd
-	var err error
-	if timeout > 0 {
-		go func() {
-			time.Sleep(time.Duration(timeout) * time.Second)
-			timeoutChan <- true
-		}()
+func (sshCtx *SSHContext) CmdInteractive(host Host, timeout int, parts ...string) {
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Duration(timeout)*time.Second)
+	defer cancel()
+
+	cmd, err := sshCtx.CmdContext(ctx, host, parts...)
+	if err == nil {
+		cmd.Stdout = os.Stderr
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
 	}
-	go func() {
-		cmd, err = ctx.Cmd(host, parts...)
-		if err == nil {
-			cmd.Stdout = os.Stderr
-			cmd.Stderr = os.Stderr
-			err = cmd.Run()
-		}
-		doneChan <- true
 
-		if err != nil && !<-timeoutChan {
-			fmt.Fprintf(os.Stderr, "Exec of cmd: %s failed with err: '%s'\n", parts, err.Error())
-		}
-	}()
+	// context was cancelled
+	if ctx.Err() != nil {
+		fmt.Fprintf(os.Stderr, "Exec of cmd: %s timed out\n", parts)
+		return
+	}
 
-	for {
-		select {
-		case <-timeoutChan:
-			fmt.Fprintf(os.Stderr, "Exec of cmd: %s timed out\n", parts)
-			cmd.Process.Kill()
-			return
-		case <-doneChan:
-			return
-		}
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Exec of cmd: %s failed with err: '%s'\n", parts, err.Error())
 	}
 }
 
