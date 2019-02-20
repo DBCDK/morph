@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 )
 
 type Context interface {
@@ -235,6 +236,26 @@ func (ctx *SSHContext) ActivateConfiguration(host Host, configuration string, ac
 	}
 
 	return nil
+}
+
+func (sshCtx *SSHContext) GetBootID(host Host) (string, error) {
+	ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
+	defer cancel()
+	cmd, err := sshCtx.CmdContext(ctx, host, "cat", "/proc/sys/kernel/random/boot_id")
+	if err != nil {
+		return "", err
+	}
+
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = os.Stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 func (ctx *SSHContext) MakeTempFile(host Host) (path string, err error) {

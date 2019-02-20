@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 )
 
 // This is set at build time via -ldflags magic
@@ -368,25 +367,11 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		}
 
 		if deployReboot {
-			if cmd, err := sshContext.Cmd(&host, "sudo", "reboot"); cmd != nil {
-				fmt.Fprint(os.Stderr, "Asking host to reboot ... ")
-				if err = cmd.Run(); err != nil {
-					// Here we assume that exit code 255 means: "SSH connection got disconnected",
-					// which is OK for a reboot - sshd may close active connections before we disconnect after all
-					if exitErr, ok := err.(*exec.ExitError); ok {
-						if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.ExitStatus() == 255 {
-							fmt.Fprintln(os.Stderr, "Remote host disconnected.")
-							err = nil
-						}
-					}
-				}
-			}
-
+			err = host.Reboot(sshContext)
 			if err != nil {
+				fmt.Fprintln(os.Stderr, "Reboot failed")
 				return "", err
 			}
-
-			fmt.Fprintln(os.Stderr)
 		}
 
 		if !skipHealthChecks {
@@ -578,10 +563,10 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 		nixBuildTargets = fmt.Sprintf("{ \"out\" = %s; }", nixBuildTarget)
 	}
 
-  ctx := getNixContext()
+	ctx := getNixContext()
 	resultPath, err = ctx.BuildMachines(deploymentPath, hosts, nixBuildArg, nixBuildTargets)
 
-  if err != nil {
+	if err != nil {
 		return
 	}
 
