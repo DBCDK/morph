@@ -69,7 +69,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err err
 	return hosts, nil
 }
 
-func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string) (path string, err error) {
+func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (path string, err error) {
 	hostsArg := "["
 	for _, host := range hosts {
 		hostsArg += "\"" + host.TargetHost + "\" "
@@ -96,6 +96,11 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 	if ctx.ShowTrace {
 		args = append(args, "--show-trace")
+	}
+
+	if nixBuildTargets != "" {
+		args = append(args,
+			"--arg", "buildTargets", nixBuildTargets)
 	}
 
 	cmd := exec.Command("nix-build", args...)
