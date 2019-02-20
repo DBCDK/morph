@@ -1,10 +1,12 @@
 package healthchecks
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"github.com/dbcdk/morph/ssh"
+	"github.com/dbcdk/morph/utils"
 	"net/http"
 	"time"
 )
@@ -20,7 +22,7 @@ type HealthChecks struct {
 }
 
 type CmdHealthCheck struct {
-	SshContext	*ssh.SSHContext
+	SshContext  *ssh.SSHContext
 	Description string
 	Cmd         []string
 	Period      int
@@ -54,12 +56,19 @@ func (healthCheck CmdHealthCheck) GetPeriod() int {
 }
 
 func (healthCheck CmdHealthCheck) Run(host Host) error {
-	cmd, err := healthCheck.SshContext.Cmd(host, healthCheck.Cmd...)
+	ctx, cancel := utils.ContextWithConditionalTimeout(context.TODO(), healthCheck.Timeout)
+	defer cancel()
+
+	cmd, err := healthCheck.SshContext.CmdContext(ctx, host, healthCheck.Cmd...)
 	if err != nil {
 		errorMessage := fmt.Sprintf("Health check error: %s", err.Error())
 		return errors.New(errorMessage)
 	}
 	data, err := cmd.CombinedOutput()
+	if ctx.Err() != nil {
+		errorMessage := fmt.Sprintf("Health check error: Timeout after %ds", healthCheck.Timeout)
+		return errors.New(errorMessage)
+	}
 	if err != nil {
 		errorMessage := fmt.Sprintf("Health check error: %s", string(data))
 		return errors.New(errorMessage)
@@ -82,6 +91,12 @@ func (healthCheck HttpHealthCheck) Run(host Host) error {
 	if healthCheck.Host == nil {
 		replacementHostname := host.GetTargetHost()
 		healthCheck.Host = &replacementHostname
+	}
+
+	// http.Client interprets a timeout of 0 as "no timeout", but we still have to avoid passing
+	// a negative timeout to it
+	if healthCheck.Timeout < 0 {
+		healthCheck.Timeout = 0
 	}
 
 	transport := &http.Transport{}
