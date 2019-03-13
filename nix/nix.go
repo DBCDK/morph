@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+	"path"
 )
 
 type Host struct {
@@ -28,6 +29,7 @@ type Host struct {
 type NixContext struct {
 	EvalMachines string
 	ShowTrace    bool
+	KeepGCRoot   bool
 }
 
 func (host *Host) GetTargetHost() string {
@@ -131,22 +133,30 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err err
 	return hosts, nil
 }
 
-func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (path string, err error) {
+func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (resultPath string, err error) {
 	hostsArg := "["
 	for _, host := range hosts {
 		hostsArg += "\"" + host.TargetHost + "\" "
 	}
 	hostsArg += "]"
 
-	// create tmp dir for result link
-	tmpdir, err := ioutil.TempDir("", "morph-")
-	if err != nil {
-		return "", err
+	resultLinkPath :=
+	  fmt.Sprintf("%s/.gcroots/%s",
+                      path.Dir(deploymentPath),
+                      path.Base(deploymentPath))
+	if ctx.KeepGCRoot {
+	  if err = os.MkdirAll(path.Dir(resultLinkPath), 755) ; err != nil {
+		  return
+	  }
+	} else {
+	  // create tmp dir for result link
+	  tmpdir, err := ioutil.TempDir("", "morph-")
+	  if err != nil {
+		  return "", err
+	  }
+	  defer os.Remove(tmpdir)
+	  resultLinkPath = filepath.Join(tmpdir, "result")
 	}
-	defer os.Remove(tmpdir)
-
-	resultLinkPath := filepath.Join(tmpdir, "result")
-
 	args := []string{ctx.EvalMachines,
 		"-A", "machines",
 		"--arg", "networkExpr", deploymentPath,
@@ -156,6 +166,7 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	if len(nixArgs) > 0 {
 		args = append(args, nixArgs...)
 	}
+
 	if ctx.ShowTrace {
 		args = append(args, "--show-trace")
 	}
@@ -166,7 +177,9 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 
 	cmd := exec.Command("nix-build", args...)
-	defer os.Remove(resultLinkPath)
+	if ! ctx.KeepGCRoot {
+	  defer os.Remove(resultLinkPath)
+	}
 
 	// show process output on attached stdout/stderr
 	cmd.Stdout = os.Stderr
@@ -177,15 +190,15 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		errorMessage := fmt.Sprintf(
 			"Error while running `nix build ...`: See above.",
 		)
-		return path, errors.New(errorMessage)
+		return resultPath, errors.New(errorMessage)
 	}
 
-	resultPath, err := os.Readlink(resultLinkPath)
+	resultPath, err = os.Readlink(resultLinkPath)
 	if err != nil {
 		return "", err
 	}
 
-	return resultPath, nil
+	return
 }
 
 func GetNixSystemPath(host Host, resultPath string) (string, error) {
