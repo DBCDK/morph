@@ -53,7 +53,7 @@ var (
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
 	assetRoot, assetsErr = assets.Setup()
-	keepGCRoot           = *app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("True").Bool()
+	keepGCRoot           = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
 )
 
 func deploymentArg(cmd *kingpin.CmdClause) {
@@ -541,7 +541,7 @@ func getNixContext() *nix.NixContext {
 	return &nix.NixContext{
 		EvalMachines: filepath.Join(assetRoot, "eval-machines.nix"),
 		ShowTrace:    showTrace,
-		KeepGCRoot:   keepGCRoot,
+		KeepGCRoot:   *keepGCRoot,
 	}
 }
 
