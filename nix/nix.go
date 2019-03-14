@@ -146,9 +146,11 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
                       path.Base(deploymentPath))
 	if ctx.KeepGCRoot {
 	  if err = os.MkdirAll(path.Dir(resultLinkPath), 755) ; err != nil {
-		  return
+		  ctx.KeepGCRoot = false;
+		  fmt.Fprintf(os.Stderr, "Unable to create GC root, skipping: %s", err)
 	  }
-	} else {
+	}
+	if ! ctx.KeepGCRoot {
 	  // create tmp dir for result link
 	  tmpdir, err := ioutil.TempDir("", "morph-")
 	  if err != nil {
