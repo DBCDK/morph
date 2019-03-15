@@ -215,11 +215,15 @@ func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
 func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	var userArg = ""
 	var keyArg = ""
+	var env = os.Environ()
 	if ctx.Username != "" {
 		userArg = ctx.Username + "@"
 	}
 	if ctx.IdentityFile != "" {
 		keyArg = "?ssh-key=" + ctx.IdentityFile
+	}
+	if ctx.SkipHostKeyCheck {
+		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s","-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
 	}
 
 	for _, path := range paths {
@@ -228,6 +232,7 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 			path,
 			"--to", "ssh://"+userArg+host.TargetHost+keyArg,
 		)
+		cmd.Env = env
 
 		cmd.Stdout = os.Stderr
 		cmd.Stderr = os.Stderr
