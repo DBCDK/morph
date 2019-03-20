@@ -1,8 +1,14 @@
-{ pkgs ? (import <nixpkgs> {}) }:
+let
+  nixpkgsSrc = builtins.fetchTarball {
+    url = "https://github.com/NixOS/nixpkgs-channels/archive/832eb2559d4a4280a0cc3e539080993e121e8d98.tar.gz";
+    sha256 = "01r9w24w34nh90cjanah04fgs9nh87r2jdhmki0zkx2n4ppfnjld";
+  };
+in
+
+{ pkgs ? (import nixpkgsSrc {}) }:
 
 with pkgs;
 let
-  dep2nix = callPackage ./nix-packaging/dep2nix {};
   packagingOut = "./nix-packaging";
 
   shellHook = ''
@@ -21,24 +27,21 @@ let
 
     # Populate /vendor-dir (for convenience in local dev)
     if [ "$1" == "update" ]; then
-      ${dep}/bin/dep ensure -v -update
+      ${go}/bin/go get -u
+
+      # compute the sha256 of the dependencies
+      GO111MODULE=on GOPATH="$TMPDIR/gopath" ${go}/bin/go mod download
+      sha256="$(${nix}/bin/nix hash-path --base32 "$TMPDIR/gopath/pkg/mod/cache/download" | tr -d '\n')"
+      sed -e "s#modSha256.*#modSha256 = \"$sha256\";#" -i ${packagingOut}/default.nix
     else
-      ${dep}/bin/dep ensure -v -vendor-only
+      ${go}/bin/go mod vendor
     fi
-
-    # Write /nix-packaging/deps.nix (for use in distribution)
-    outpath=$(readlink -f ${packagingOut})
-    outpath="$outpath/deps.nix"
-
-    ${dep2nix}/bin/dep2nix -i Gopkg.lock -o $outpath
   '';
-  makeBuild = writeShellScriptBin "make-build"  ''
+  makeBuild = writeShellScriptBin "make-build" ''
     set -e
 
-    outpath="$(readlink -f ${packagingOut})/deps.nix"
-
-    ${nix}/bin/nix-build -E 'with import <nixpkgs> {};
-      callPackage ./nix-packaging/default.nix {}' -A bin $@
+    ${nix}/bin/nix-build -E 'with import ${nixpkgsSrc} {};
+      callPackage ./nix-packaging/default.nix {}' -A out $@
 
     make-env
   '';
