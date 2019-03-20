@@ -3,7 +3,7 @@
 
 [[projects]]
   branch = "morph"
-  name = "github.com/dbcdk/kingpin"
+  name = "github.com/DBCDK/kingpin"
   packages = ["."]
   revision = "8554767bc91254c59c7297a99e9867c770e4eadb"
 
