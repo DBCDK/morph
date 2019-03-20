@@ -3,7 +3,7 @@ package healthchecks
 import (
 	"errors"
 	"fmt"
-	"github.com/dbcdk/morph/ssh"
+	"github.com/DBCDK/morph/ssh"
 	"os"
 	"sync"
 	"time"

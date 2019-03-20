@@ -1,7 +1,7 @@
 package filter
 
 import (
-	"github.com/dbcdk/morph/nix"
+	"github.com/DBCDK/morph/nix"
 	"github.com/gobwas/glob"
 )
 

@@ -16,7 +16,7 @@ buildGoPackage rec {
   name = "morph-unstable-${version}";
   inherit version;
 
-  goPackagePath = "github.com/dbcdk/morph";
+  goPackagePath = "github.com/DBCDK/morph";
 
   nativeBuildInputs = [ go-bindata ];
 
@@ -41,7 +41,7 @@ buildGoPackage rec {
   outputs = [ "out" "lib" ];
 
   meta = {
-    homepage = "https://github.com/dbcdk/morph";
+    homepage = "https://github.com/DBCDK/morph";
     description = "Morph is a NixOS host manager written in Golang.";
   };
 }

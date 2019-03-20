@@ -1,10 +1,10 @@
 # file generated from Gopkg.lock using dep2nix (https://github.com/nixcloud/dep2nix)
 [
   {
-    goPackagePath  = "github.com/dbcdk/kingpin";
+    goPackagePath  = "github.com/DBCDK/kingpin";
     fetch = {
       type = "git";
-      url = "https://github.com/dbcdk/kingpin";
+      url = "https://github.com/DBCDK/kingpin";
       rev =  "8554767bc91254c59c7297a99e9867c770e4eadb";
       sha256 = "05hfpgylv5mfnjz2mdd3jl8p3psmczvdbs4ydf9xvvc17c9mlrpq";
     };
