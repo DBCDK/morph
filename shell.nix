@@ -20,23 +20,37 @@ let
   makeDeps = writeShellScriptBin "make-deps" ''
     set -e
 
-    # Populate /vendor-dir (for convenience in local dev)
+    export GO111MODULE=on
+
+    # update the modules if requested
     if [ "$1" == "update" ]; then
       ${go}/bin/go get -u
 
+      source="$( nix eval --raw '(with import ${nixpkgsSrc} {}; import ./nix-packaging/source.nix { inherit lib; })' )"
+
       # compute the sha256 of the dependencies
-      GO111MODULE=on GOPATH="$TMPDIR/gopath" ${go}/bin/go mod download
-      sha256="$(${nix}/bin/nix hash-path --base32 "$TMPDIR/gopath/pkg/mod/cache/download" | tr -d '\n')"
+      pushd "$source" >/dev/null
+        export GOPATH="$(mktemp -d)" GOCACHE="$(mktemp -d)"
+        ${go}/bin/go mod download
+        sha256="$( ${nix}/bin/nix hash-path --base32 "$GOPATH/pkg/mod/cache/download" | tr -d '\n' )"
+      popd >/dev/null
+
+      # replace the sha256 in the default.nix
       sed -e "s#modSha256.*#modSha256 = \"$sha256\";#" -i ${packagingOut}/default.nix
-    else
-      ${go}/bin/go mod vendor
+
+      unset GOPATH GOCACHE
     fi
+
+    # Populate /vendor (for convenience in local dev)
+    ${go}/bin/go mod vendor
+
+    unset GO111MODULE
   '';
   makeBuild = writeShellScriptBin "make-build" ''
     set -e
 
     ${nix}/bin/nix-build -E 'with import ${nixpkgs} {};
-      callPackage ./nix-packaging/default.nix {}' -A out $@
+      callPackage ./nix-packaging/default.nix {}' $@
 
     make-env
   '';
