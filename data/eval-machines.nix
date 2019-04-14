@@ -3,10 +3,9 @@
 
 let
   network = import networkExpr;
-  pkgs    = network.network.pkgs;
-  lib     = pkgs.lib;
+  netPkgs = network.network.pkgs;
+  lib     = netPkgs.lib;
 in
-  with pkgs;
   with lib;
 
 rec {
@@ -18,10 +17,33 @@ rec {
         # expression, attaching _file attributes so the NixOS module
         # system can give sensible error messages.
         modules = [ { imports = [ network.${machineName} ]; } { inherit (network) _file; } ];
+
+        customPath = lib.attrByPath [ "deployment" "nixPath" ] [] (network.${machineName} { config = {}; pkgs = {}; });
+
+        # add path of network.pkgs if customPath is empty
+        netPath = if customPath == [] then [ { prefix = "nixpkgs"; path = netPkgs.path; } ] else [];
+
+        __nixPath = customPath ++ netPath ++ builtins.nixPath;
+
+        # must stay before __nixPath so we resolve <nixpkgs> correctly
+        importTarget = lib.attrByPath [ "deployment" "importPath" ] <nixpkgs/nixos/lib/eval-config.nix> (network.${machineName} { config = {}; pkgs = {}; });
+
+        importFn =
+          if customPath == [] then
+            import
+          else
+            let
+              overrides = {
+                inherit __nixPath;
+                import = fn: scopedImport overrides fn;
+                scopedImport = attrs: fn: scopedImport (overrides // attrs) fn;
+                builtins = builtins // overrides;
+              };
+            in
+              scopedImport overrides;
       in
       { name = machineName;
-        value = import "${toString pkgs.path}/nixos/lib/eval-config.nix" {
-          inherit pkgs;
+        value = importFn importTarget {
           modules =
             modules ++
             [ { key = "deploy-stuff";
@@ -57,7 +79,7 @@ rec {
       flip mapAttrs nodes (n: v': let v = scrubOptionValue v'; in
         { inherit (v.config.deployment) targetHost secrets healthChecks buildOnly;
           name = n;
-          nixosRelease = v.config.system.nixos.release or (removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
+          #nixosRelease = v.config.system.nixos.release or (removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
         }
       );
 
@@ -68,7 +90,7 @@ rec {
   # Phase 2: build complete machine configurations.
   machines = { names, buildTargets ? null }:
     let nodes' = filterAttrs (n: v: elem n names) nodes; in
-    pkgs.runCommand "morph"
+    netPkgs.runCommand "morph"
       { preferLocalBuild = true; }
       (if buildTargets == null
       then ''

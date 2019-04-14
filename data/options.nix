@@ -161,6 +161,25 @@ in
       type = str;
     };
 
+    nixPath = mkOption {
+      type = attrsOf unspecified;
+      default = [];
+      example = [ { prefix = "nixpkgs"; path = "/home/test/git"; } ];
+      dsecription = ''
+        Per machine NIX_PATH override(s)
+      '';
+
+    };
+
+    importPath = mkOption {
+      type = str;
+      dsecription = ''
+        Per machine import path of config evaluator (operating system entry point)
+
+        By default this is <nixpkgs/nixos/lib/eval-config.nix>
+      '';
+    };
+
     buildOnly = mkOption {
       type = bool;
       default = false;
