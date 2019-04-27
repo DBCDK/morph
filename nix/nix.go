@@ -140,12 +140,9 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 	hostsArg += "]"
 
-	resultLinkPath :=
-	  fmt.Sprintf("%s/.gcroots/%s",
-                      path.Dir(deploymentPath),
-                      path.Base(deploymentPath))
+	resultLinkPath := filepath.Join(path.Dir(deploymentPath), ".gcroots", path.Base(deploymentPath))
 	if ctx.KeepGCRoot {
-	  if err = os.MkdirAll(path.Dir(resultLinkPath), 755) ; err != nil {
+	  if err = os.MkdirAll(path.Dir(resultLinkPath), 0755) ; err != nil {
 		  ctx.KeepGCRoot = false;
 		  fmt.Fprintf(os.Stderr, "Unable to create GC root, skipping: %s", err)
 	  }
