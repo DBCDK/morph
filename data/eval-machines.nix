@@ -29,18 +29,15 @@ rec {
         importTarget = lib.attrByPath [ "deployment" "importPath" ] <nixpkgs/nixos/lib/eval-config.nix> (network.${machineName} { config = {}; pkgs = {}; });
 
         importFn =
-          if customPath == [] then
-            import
-          else
-            let
-              overrides = {
-                inherit __nixPath;
-                import = fn: scopedImport overrides fn;
-                scopedImport = attrs: fn: scopedImport (overrides // attrs) fn;
-                builtins = builtins // overrides;
-              };
-            in
-              scopedImport overrides;
+          let
+            overrides = {
+              inherit __nixPath;
+              import = fn: scopedImport overrides fn;
+              scopedImport = attrs: fn: scopedImport (overrides // attrs) fn;
+              builtins = builtins // overrides;
+            };
+          in
+            scopedImport overrides;
       in
       { name = machineName;
         value = importFn importTarget {
