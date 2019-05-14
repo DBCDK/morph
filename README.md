@@ -138,6 +138,10 @@ Health checks will be repeated until success, and the interval can be configured
 
 It is currently possible to have expressions like `"test \"$(systemctl list-units --failed --no-legend --no-pager |wc -l)\" -eq 0"` (count number of failed systemd units, fail if non-zero) as the first argument in a cmd-healthcheck. This works, but is discouraged, and might break at any time.
 
+## Disabling morph
+
+In case you need to prevent morph to deploy onto system temporarily, just touch the /.morph_condor file.
+
 
 ## Hacking morph
 

@@ -213,6 +213,13 @@ func (ctx *SSHContext) ActivateConfiguration(host Host, configuration string, ac
 		}
 	}
 
+	condor := ctx.HostCondor(host)
+	if condor == nil {
+		fmt.Fprintln(os.Stderr, "Morph is disabled on the remote host (/.morph_condor).")
+		return nil
+	}
+
+
 	args := []string{filepath.Join(configuration, "bin/switch-to-configuration"), action}
 
 	var (
@@ -235,6 +242,20 @@ func (ctx *SSHContext) ActivateConfiguration(host Host, configuration string, ac
 		return errors.New("Error while activating new configuration.")
 	}
 
+	return nil
+}
+
+func (ctx *SSHContext) HostCondor(host Host) error {
+
+	cmd, err := ctx.Cmd(host, "test", "-f", "/.morph_condor")
+
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
