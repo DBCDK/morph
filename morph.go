@@ -171,7 +171,7 @@ func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		Default("False").
 		BoolVar(&deployUploadSecrets)
 	cmd.
-		Flag("reboot", "Reboots the host after system activation, but before healthchecks as executed.").
+		Flag("reboot", "Reboots the host after system activation, but before healthchecks has executed.").
 		Default("False").
 		BoolVar(&deployReboot)
 	cmd.
