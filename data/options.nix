@@ -108,7 +108,7 @@ httpHealthCheckType = types.submodule ({ ... }: {
     };
     headers = mkOption {
       type = attrsOf str;
-      description = "not implemented";
+      description = "HTTP request headers";
       default = {};
     };
     period = mkOption {
