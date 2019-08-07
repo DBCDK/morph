@@ -8,6 +8,7 @@ import (
 	"github.com/dbcdk/morph/ssh"
 	"github.com/dbcdk/morph/utils"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -112,10 +113,14 @@ func (healthCheck HttpHealthCheck) Run(host Host) error {
 	req, err := http.NewRequest("GET", url, nil)
 
 	for headerKey, headerValue := range healthCheck.Headers {
-		req.Header.Add(headerKey, headerValue)
+		if strings.ToLower(headerKey) == "host" {
+			req.Host = headerValue
+		} else {
+			req.Header.Add(headerKey, headerValue)
+		}
 	}
 
-	resp, err := client.Get(url)
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return err
