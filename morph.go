@@ -36,9 +36,9 @@ var (
 	nixBuildArg         []string
 	nixBuildTarget      string
 	nixBuildTargetFile  string
-	build               = buildCmd(app.Command("build", "Build machines"))
-	push                = pushCmd(app.Command("push", "Push machines"))
-	deploy              = deployCmd(app.Command("deploy", "Deploy machines"))
+	build               = buildCmd(app.Command("build", "Evaluate and build deployment configuration to the local Nix store"))
+	push                = pushCmd(app.Command("push", "Build and transfer items from the local Nix store to target machines"))
+	deploy              = deployCmd(app.Command("deploy", "Build, push and activate new configuration on machines according to switch-action"))
 	deploySwitchAction  string
 	deployUploadSecrets bool
 	deployReboot        bool

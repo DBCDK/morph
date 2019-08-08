@@ -25,7 +25,7 @@ Consider checking out a specific tag, or at least pin the version of morph you'r
 
 ## Using morph
 
-All commands supports a `--help` flag. `morph --help` as of v1.0.0:
+All commands support a `--help` flag; `morph --help` as of v1.0.0:
 ```
 $ morph --help
 usage: morph [<flags>] <command> [<args> ...]
@@ -42,13 +42,13 @@ Commands:
     Show help.
 
   build [<flags>] <deployment>
-    Build machines
+    Evaluate and build deployment configuration to the local Nix store
 
   push [<flags>] <deployment>
-    Push machines
+    Build and transfer items from the local Nix store to target machines
 
   deploy [<flags>] <deployment> <switch-action>
-    Deploy machines
+    Build, push and activate new configuration on machines according to switch-action
 
   check-health [<flags>] <deployment>
     Run health checks
@@ -60,7 +60,11 @@ Commands:
     Execute arbitrary commands on machines
 ```
 
-For help on other commands, run `morph <cmd> --help`.
+Notably, `morph deploy` requires a `<switch-action>`.
+The switch-action must be one of `dry-activate`, `test`, `switch` or `boot` corresponding to `nixos-rebuild` arguments of the same name.
+Refer to the [NixOS manual](https://nixos.org/nixos/manual/index.html#sec-changing-config) for a detailed description of switch-actions.
+
+For help on this and other commands, run `morph <cmd> --help`.
 
 Example deployments can be found in the `examples` directory, and built as follows:
 ```
