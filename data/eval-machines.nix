@@ -21,16 +21,29 @@ rec {
       in
       { name = machineName;
         value = import "${toString pkgs.path}/nixos/lib/eval-config.nix" {
-          inherit pkgs;
           modules =
             modules ++
-            [ { key = "deploy-stuff";
+            [ ({ config, lib, options, ... }: {
+                key = "deploy-stuff";
                 imports = [ ./options.nix ];
                 # Provide a default hostname and deployment target equal
                 # to the attribute name of the machine in the model.
-                networking.hostName = mkOverride 900 machineName;
-                deployment.targetHost = mkOverride 900 machineName;
-              }
+                networking.hostName = lib.mkDefault machineName;
+                deployment.targetHost = lib.mkDefault machineName;
+
+                # Apply network-level nixpkgs arguments as a baseline for
+                # per-machine nixpkgs arguments; set at 900 priority so they
+                # can be overridden from within each machine
+                nixpkgs.localSystem = lib.mkDefault pkgs.buildPlatform;
+                nixpkgs.crossSystem = lib.mkDefault pkgs.hostPlatform;
+                nixpkgs.overlays = lib.mkDefault pkgs.overlays;
+                nixpkgs.pkgs = lib.mkDefault (import pkgs.path {
+                  inherit (config.nixpkgs) overlays localSystem crossSystem;
+                  # Merge nixpkgs.config using its merge function
+                  config = options.nixpkgs.config.type.merge ""
+                    ([ { value = pkgs.config; } options.nixpkgs.config ]);
+                });
+              })
             ];
           extraArgs = { inherit nodes ; name = machineName; };
         };
