@@ -32,7 +32,7 @@ rec {
                 deployment.targetHost = lib.mkDefault machineName;
 
                 # Apply network-level nixpkgs arguments as a baseline for
-                # per-machine nixpkgs arguments; set at 900 priority so they
+                # per-machine nixpkgs arguments; mkDefault'ed so they
                 # can be overridden from within each machine
                 nixpkgs.localSystem = lib.mkDefault pkgs.buildPlatform;
                 nixpkgs.crossSystem = lib.mkDefault pkgs.hostPlatform;
