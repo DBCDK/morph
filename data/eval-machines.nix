@@ -37,12 +37,16 @@ rec {
                 nixpkgs.localSystem = lib.mkDefault pkgs.buildPlatform;
                 nixpkgs.crossSystem = lib.mkDefault pkgs.hostPlatform;
                 nixpkgs.overlays = lib.mkDefault pkgs.overlays;
-                nixpkgs.pkgs = lib.mkDefault (import pkgs.path {
-                  inherit (config.nixpkgs) overlays localSystem crossSystem;
+                nixpkgs.pkgs = lib.mkDefault (import pkgs.path ({
+                  inherit (config.nixpkgs) overlays localSystem;
                   # Merge nixpkgs.config using its merge function
                   config = options.nixpkgs.config.type.merge ""
                     ([ { value = pkgs.config; } options.nixpkgs.config ]);
-                });
+                } // lib.optionalAttrs (config.nixpkgs.localSystem != config.nixpkgs.crossSystem) {
+                  # Only override crossSystem if it is not equivalent to
+                  # localSystem; works around issue #68
+                  inherit (config.nixpkgs) crossSystem;
+                }));
               })
             ];
           extraArgs = { inherit nodes ; name = machineName; };
