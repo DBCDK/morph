@@ -237,12 +237,7 @@ func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
 		return paths, err
 	}
 
-	path2, err := GetNixSystemDerivation(host, resultPath)
-	if err != nil {
-		return paths, err
-	}
-
-	paths = append(paths, path1, path2)
+	paths = append(paths, path1)
 
 	return paths, nil
 }
