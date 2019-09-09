@@ -38,7 +38,7 @@ rec {
                 nixpkgs.crossSystem = lib.mkDefault pkgs.hostPlatform;
                 nixpkgs.overlays = lib.mkDefault pkgs.overlays;
                 nixpkgs.pkgs = lib.mkDefault (import pkgs.path ({
-                  inherit (config.nixpkgs) overlays localSystem;
+                  inherit (config.nixpkgs) localSystem;
                   # Merge nixpkgs.config using its merge function
                   config = options.nixpkgs.config.type.merge ""
                     ([ { value = pkgs.config; } options.nixpkgs.config ]);
