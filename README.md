@@ -115,6 +115,13 @@ Selected 4/17 hosts (name filter:-6, limits:-7):
 The output is pretty self explanatory, except probably for the last bit of the first line.
 `name filter` shows the change in number of hosts after glob matching on the hosts name, and `limits` shows the change after applying `--limit`, `--skip` and `--every`.
 
+### Environment Variables
+
+Morph supports the following (optional) environment variables:
+
+- `SSH_IDENTITY_FILE` the (local) path to the SSH private key file that should be used
+- `SSH_USER` specifies the user that should be used to connect to the remote system
+- `SSH_SKIP_HOST_KEY_CHECK` if set disables host key verification
 
 ### Secrets
 
