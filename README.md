@@ -68,7 +68,7 @@ For help on this and other commands, run `morph <cmd> --help`.
 
 Example deployments can be found in the `examples` directory, and built as follows:
 ```
-$ morph build examples/simple.nix 
+$ morph build examples/simple.nix
 Selected 2/2 hosts (name filter:-0, limits:-0):
 	  0: db01.example.com (secrets: 0, health checks: 0)
 	  1: web01.example.com (secrets: 0, health checks: 0)
@@ -76,7 +76,7 @@ Selected 2/2 hosts (name filter:-0, limits:-0):
 <probably lots of nix-build output>
 
 /nix/store/grvny5ga2i6jdxjjbh2ipdz7h50swi1n-morph
-nix result path: 
+nix result path:
 /nix/store/grvny5ga2i6jdxjjbh2ipdz7h50swi1n-morph
 ```
 
@@ -115,6 +115,13 @@ Selected 4/17 hosts (name filter:-6, limits:-7):
 The output is pretty self explanatory, except probably for the last bit of the first line.
 `name filter` shows the change in number of hosts after glob matching on the hosts name, and `limits` shows the change after applying `--limit`, `--skip` and `--every`.
 
+### Environment Variables
+
+Morph supports the following (optional) environment variables:
+
+- `SSH_IDENTITY_FILE` the (local) path to the SSH private key file that should be used
+- `SSH_USER` specifies the user that should be used to connect to the remote system
+- `SSH_SKIP_HOST_KEY_CHECK` if set disables host key verification
 
 ### Secrets
 
