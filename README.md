@@ -68,7 +68,7 @@ For help on this and other commands, run `morph <cmd> --help`.
 
 Example deployments can be found in the `examples` directory, and built as follows:
 ```
-$ morph build examples/simple.nix 
+$ morph build examples/simple.nix
 Selected 2/2 hosts (name filter:-0, limits:-0):
 	  0: db01.example.com (secrets: 0, health checks: 0)
 	  1: web01.example.com (secrets: 0, health checks: 0)
@@ -76,7 +76,7 @@ Selected 2/2 hosts (name filter:-0, limits:-0):
 <probably lots of nix-build output>
 
 /nix/store/grvny5ga2i6jdxjjbh2ipdz7h50swi1n-morph
-nix result path: 
+nix result path:
 /nix/store/grvny5ga2i6jdxjjbh2ipdz7h50swi1n-morph
 ```
 
