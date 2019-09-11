@@ -241,6 +241,7 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	for _, path := range paths {
 		cmd := exec.Command(
 			"nix", "copy",
+			"--substitute-on-destination",
 			path,
 			"--to", "ssh://"+userArg+host.TargetHost+keyArg,
 		)
