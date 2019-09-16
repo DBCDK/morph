@@ -5,8 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dbcdk/morph/utils"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 	"os/exec"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/dbcdk/morph/utils"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Context interface {
@@ -85,6 +86,7 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 			"-o", "StrictHostKeyChecking=No",
 			"-o", "UserKnownHostsFile=/dev/null")
 	}
+
 	if ctx.IdentityFile != "" {
 		args = append(args, "-i")
 		args = append(args, ctx.IdentityFile)
@@ -92,17 +94,29 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 	if ctx.ConfigFile != "" {
 		args = append(args, "-F", ctx.ConfigFile)
 	}
-	var hostAndDestination = host.GetTargetHost()
+
+	target, port := utils.SplitHost(host.GetTargetHost())
+	if port != "" {
+		switch cmd {
+		case "scp":
+			args = append(args, "-P", port)
+		case "ssh":
+			args = append(args, "-p", port)
+		}
+	}
+
 	if transfer != nil {
 		args = append(args, transfer.Source)
-		hostAndDestination += ":" + transfer.Destination
+		target += ":" + transfer.Destination
 	}
+
 	if host.GetTargetUser() != "" {
-		hostAndDestination = host.GetTargetUser() + "@" + hostAndDestination
+		target = host.GetTargetUser() + "@" + target
 	} else if ctx.DefaultUsername != "" {
-		hostAndDestination = ctx.DefaultUsername + "@" + hostAndDestination
+		target = ctx.DefaultUsername + "@" + target
 	}
-	args = append(args, hostAndDestination)
+
+	args = append(args, target)
 
 	return
 }
