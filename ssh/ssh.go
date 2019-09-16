@@ -78,7 +78,7 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 
 	if ctx.SkipHostKeyCheck {
 		args = append(args,
-			"-o", "StrictHostkeyChecking=No",
+			"-o", "StrictHostKeyChecking=No",
 			"-o", "UserKnownHostsFile=/dev/null")
 	}
 	if ctx.IdentityFile != "" {
