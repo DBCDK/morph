@@ -129,6 +129,8 @@ Files can be uploaded without ever ending up in the nix store, by specifying eac
 
 See `examples/secrets.nix` or the type definitions in `data/options.nix`.
 
+To upload secrets, use the `morph upload-secrets` subcommand, or pass `--upload-secrets` to `morph deploy`.
+
 *Note:*
 Morph will automatically create directories parent to `secret.Destination` if they don't exist.
 New dirs will be owned by root:root and have mode 755 (drwxr-xr-x).
