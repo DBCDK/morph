@@ -219,11 +219,7 @@ func (ctx *SSHContext) ActivateConfiguration(host Host, configuration string, ac
 		cmd *exec.Cmd
 		err error
 	)
-	if action == "dry-activate" {
-		cmd, err = ctx.Cmd(host, args...)
-	} else {
-		cmd, err = ctx.SudoCmd(host, args...)
-	}
+	cmd, err = ctx.SudoCmd(host, args...)
 	if err != nil {
 		return err
 	}
