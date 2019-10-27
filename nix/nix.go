@@ -24,6 +24,7 @@ type Host struct {
 	TargetHost   string
 	Secrets      map[string]secrets.Secret
 	BuildOnly    bool
+	NixConfig    map[string]string
 }
 
 type NixContext struct {
@@ -162,6 +163,8 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		"--arg", "names", hostsArg,
 		"--out-link", resultLinkPath}
 
+	args = append(args, mkOptions(hosts[0])...)
+
 	if len(nixArgs) > 0 {
 		args = append(args, nixArgs...)
 	}
@@ -198,6 +201,16 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 
 	return
+}
+
+func mkOptions(host Host) []string {
+	var options = make([]string, 0)
+	for k, v := range host.NixConfig {
+		options = append(options, "--option")
+		options = append(options, k)
+		options = append(options, v)
+	}
+	return options
 }
 
 func GetNixSystemPath(host Host, resultPath string) (string, error) {
@@ -238,11 +251,17 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s","-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
 	}
 
+	options := mkOptions(host)
 	for _, path := range paths {
-		cmd := exec.Command(
-			"nix", "copy",
+		args := []string{
+			"copy",
 			path,
-			"--to", "ssh://"+userArg+host.TargetHost+keyArg,
+			"--to", "ssh://" + userArg + host.TargetHost + keyArg,
+		}
+		args = append(args, options...)
+
+		cmd := exec.Command(
+			"nix", args...,
 		)
 		cmd.Env = env
 

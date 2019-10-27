@@ -75,6 +75,9 @@ rec {
         { inherit (v.config.deployment) targetHost secrets healthChecks buildOnly;
           name = n;
           nixosRelease = v.config.system.nixos.release or (removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
+          nixConfig = mapAttrs
+            (n: v: if builtins.isString v then v else throw "nix option '${n}' must have a string typed value")
+            (network'.network.nixConfig or {});
         }
       );
 
