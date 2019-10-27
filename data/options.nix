@@ -172,6 +172,16 @@ in
       '';
     };
 
+    substituteOnDestination = mkOption {
+      type = bool;
+      default = false;
+      description = ''
+        Sets the `--substitute-on-destination` flag on nix copy,
+        allowing for the deployment target to use substitutes.
+        See `nix copy --help`.
+      '';
+    };
+
     secrets = mkOption {
       default = {};
       example = {

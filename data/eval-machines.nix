@@ -72,7 +72,7 @@ rec {
 
     machines =
       flip mapAttrs nodes (n: v': let v = scrubOptionValue v'; in
-        { inherit (v.config.deployment) targetHost secrets healthChecks buildOnly;
+        { inherit (v.config.deployment) targetHost secrets healthChecks buildOnly substituteOnDestination;
           name = n;
           nixosRelease = v.config.system.nixos.release or (removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
           nixConfig = mapAttrs

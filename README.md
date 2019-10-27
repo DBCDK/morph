@@ -163,8 +163,10 @@ The default is an empty set, meaning that the nix configuration is inherited fro
 
 `buildOnly` makes morph skip the "push" and "switch" steps for the given host, even if "morph deploy" or "morph push" is executed. (default: false)
 
+`substituteOnDestination` Sets the `--substitute-on-destination` flag on nix copy, allowing for the deployment target to use substitutes. See `nix copy --help`. (default: false)
 
-Example usage of `nixConfig` and `deployment.buildOnly`:
+
+Example usage of `nixConfig` and deployment module options:
 ```
 network = {
     nixConfig = {
@@ -176,6 +178,9 @@ machine1 = { ... }: {
     deployment.buildOnly = true;
 };
 
+machine2 = { ... }: {
+    deployment.substituteOnDestination = true;
+};
 ```
 
 
