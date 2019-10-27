@@ -24,6 +24,7 @@ type Host struct {
 	TargetHost   string
 	Secrets      map[string]secrets.Secret
 	BuildOnly    bool
+	SubstituteOnDestination bool
 	NixConfig    map[string]string
 }
 
@@ -259,6 +260,9 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 			"--to", "ssh://" + userArg + host.TargetHost + keyArg,
 		}
 		args = append(args, options...)
+		if host.SubstituteOnDestination {
+			args = append(args, "--substitute-on-destination")
+		}
 
 		cmd := exec.Command(
 			"nix", args...,
