@@ -11,21 +11,21 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"syscall"
 	"time"
-	"path"
 )
 
 type Host struct {
-	HealthChecks healthchecks.HealthChecks
-	Name         string
-	NixosRelease string
-	TargetHost   string
-	Secrets      map[string]secrets.Secret
-	BuildOnly    bool
+	HealthChecks            healthchecks.HealthChecks
+	Name                    string
+	NixosRelease            string
+	TargetHost              string
+	Secrets                 map[string]secrets.Secret
+	BuildOnly               bool
 	SubstituteOnDestination bool
-	NixConfig    map[string]string
+	NixConfig               map[string]string
 }
 
 type NixContext struct {
@@ -144,19 +144,19 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	resultLinkPath := filepath.Join(path.Dir(deploymentPath), ".gcroots", path.Base(deploymentPath))
 	if ctx.KeepGCRoot {
-	  if err = os.MkdirAll(path.Dir(resultLinkPath), 0755) ; err != nil {
-		  ctx.KeepGCRoot = false;
-		  fmt.Fprintf(os.Stderr, "Unable to create GC root, skipping: %s", err)
-	  }
+		if err = os.MkdirAll(path.Dir(resultLinkPath), 0755); err != nil {
+			ctx.KeepGCRoot = false
+			fmt.Fprintf(os.Stderr, "Unable to create GC root, skipping: %s", err)
+		}
 	}
-	if ! ctx.KeepGCRoot {
-	  // create tmp dir for result link
-	  tmpdir, err := ioutil.TempDir("", "morph-")
-	  if err != nil {
-		  return "", err
-	  }
-	  defer os.Remove(tmpdir)
-	  resultLinkPath = filepath.Join(tmpdir, "result")
+	if !ctx.KeepGCRoot {
+		// create tmp dir for result link
+		tmpdir, err := ioutil.TempDir("", "morph-")
+		if err != nil {
+			return "", err
+		}
+		defer os.Remove(tmpdir)
+		resultLinkPath = filepath.Join(tmpdir, "result")
 	}
 	args := []string{ctx.EvalMachines,
 		"-A", "machines",
@@ -180,8 +180,8 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 
 	cmd := exec.Command("nix-build", args...)
-	if ! ctx.KeepGCRoot {
-	  defer os.Remove(resultLinkPath)
+	if !ctx.KeepGCRoot {
+		defer os.Remove(resultLinkPath)
 	}
 
 	// show process output on attached stdout/stderr
@@ -249,7 +249,7 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 		keyArg = "?ssh-key=" + ctx.IdentityFile
 	}
 	if ctx.SkipHostKeyCheck {
-		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s","-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
+		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s", "-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
 	}
 
 	options := mkOptions(host)
