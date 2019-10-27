@@ -151,6 +151,33 @@ Health checks will be repeated until success, and the interval can be configured
 
 It is currently possible to have expressions like `"test \"$(systemctl list-units --failed --no-legend --no-pager |wc -l)\" -eq 0"` (count number of failed systemd units, fail if non-zero) as the first argument in a cmd-healthcheck. This works, but is discouraged, and might break at any time.
 
+### Advanced configuration
+
+**nix.conf-options:** The "network"-attrset supports a sub-attrset named "nixConfig". Options configured here will pass `--option <name> <value>` to all nix commands.
+Note: these options apply to an entire deployment and are *not* configurable on per-host basis.
+The default is an empty set, meaning that the nix configuration is inherited from the build environment. See `man nix.conf`.
+
+**special deployment options:**
+
+(per-host granularity)
+
+`buildOnly` makes morph skip the "push" and "switch" steps for the given host, even if "morph deploy" or "morph push" is executed. (default: false)
+
+
+Example usage of `nixConfig` and `deployment.buildOnly`:
+```
+network = {
+    nixConfig = {
+        "extra-sandbox-paths" = "/foo/bar";
+    };
+};
+
+machine1 = { ... }: {
+    deployment.buildOnly = true;
+};
+
+```
+
 
 ## Hacking morph
 
