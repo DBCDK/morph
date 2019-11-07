@@ -275,7 +275,7 @@ func execExecute(hosts []nix.Host) error {
 
 	for _, host := range hosts {
 		if host.BuildOnly {
-			fmt.Fprintf(os.Stderr, "Exec is disabled for build-only host: %s\n", host.TargetHost)
+			fmt.Fprintf(os.Stderr, "Exec is disabled for build-only host: %s\n", host.Name)
 			continue
 		}
 		fmt.Fprintln(os.Stderr, "** "+host.Name)
@@ -337,7 +337,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 
 	for _, host := range hosts {
 		if host.BuildOnly {
-			fmt.Fprintf(os.Stderr, "Deployment steps are disabled for build-only host: %s\n", host.TargetHost)
+			fmt.Fprintf(os.Stderr, "Deployment steps are disabled for build-only host: %s\n", host.Name)
 			continue
 		}
 
@@ -384,7 +384,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			}
 		}
 
-		fmt.Fprintln(os.Stderr, "Done:", host.TargetHost)
+		fmt.Fprintln(os.Stderr, "Done:", host.Name)
 	}
 
 	return resultPath, nil
@@ -405,7 +405,7 @@ func execHealthCheck(hosts []nix.Host) error {
 	var err error
 	for _, host := range hosts {
 		if host.BuildOnly {
-			fmt.Fprintf(os.Stderr, "Healthchecks are disabled for build-only host: %s\n", host.TargetHost)
+			fmt.Fprintf(os.Stderr, "Healthchecks are disabled for build-only host: %s\n", host.Name)
 			continue
 		}
 		err = healthchecks.Perform(sshContext, &host, timeout)
@@ -421,7 +421,7 @@ func execHealthCheck(hosts []nix.Host) error {
 func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host) error {
 	for _, host := range hosts {
 		if host.BuildOnly {
-			fmt.Fprintf(os.Stderr, "Secret upload is disabled for build-only host: %s\n", host.TargetHost)
+			fmt.Fprintf(os.Stderr, "Secret upload is disabled for build-only host: %s\n", host.Name)
 			continue
 		}
 		singleHostInList := []nix.Host{host}
@@ -530,7 +530,7 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 
 	fmt.Fprintf(os.Stderr, "Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d)\n", index, host.TargetHost, len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
+		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d)\n", index, host.Name, len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
 	}
 	fmt.Fprintln(os.Stderr)
 
@@ -580,7 +580,7 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 func pushPaths(sshContext *ssh.SSHContext, filteredHosts []nix.Host, resultPath string) error {
 	for _, host := range filteredHosts {
 		if host.BuildOnly {
-			fmt.Fprintf(os.Stderr, "Push is disabled for build-only host: %s\n", host.TargetHost)
+			fmt.Fprintf(os.Stderr, "Push is disabled for build-only host: %s\n", host.Name)
 			continue
 		}
 
@@ -588,7 +588,7 @@ func pushPaths(sshContext *ssh.SSHContext, filteredHosts []nix.Host, resultPath 
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "Pushing paths to %v:\n", host.TargetHost)
+		fmt.Fprintf(os.Stderr, "Pushing paths to %v (%v):\n", host.Name, host.TargetHost)
 		for _, path := range paths {
 			fmt.Fprintf(os.Stderr, "\t* %s\n", path)
 		}
@@ -606,7 +606,7 @@ func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host) error {
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir(deployment)
 	for _, host := range filteredHosts {
-		fmt.Fprintf(os.Stderr, "Uploading secrets to %s:\n", host.TargetHost)
+		fmt.Fprintf(os.Stderr, "Uploading secrets to %s (%s):\n", host.Name, host.TargetHost)
 		postUploadActions := make(map[string][]string, 0)
 		for secretName, secret := range host.Secrets {
 			secretSize, err := secrets.GetSecretSize(secret, deploymentDir)
@@ -648,7 +648,7 @@ func activateConfiguration(ctx ssh.Context, filteredHosts []nix.Host, resultPath
 	fmt.Fprintln(os.Stderr)
 	for _, host := range filteredHosts {
 
-		fmt.Fprintln(os.Stderr, "** "+host.TargetHost)
+		fmt.Fprintln(os.Stderr, "** "+host.Name)
 
 		configuration, err := nix.GetNixSystemPath(host, resultPath)
 		if err != nil {

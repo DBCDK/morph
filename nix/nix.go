@@ -34,6 +34,10 @@ type NixContext struct {
 	KeepGCRoot   bool
 }
 
+func (host *Host) GetName() string {
+	return host.Name
+}
+
 func (host *Host) GetTargetHost() string {
 	return host.TargetHost
 }
@@ -138,7 +142,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err err
 func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (resultPath string, err error) {
 	hostsArg := "["
 	for _, host := range hosts {
-		hostsArg += "\"" + host.TargetHost + "\" "
+		hostsArg += "\"" + host.Name + "\" "
 	}
 	hostsArg += "]"
 

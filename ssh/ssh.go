@@ -31,6 +31,7 @@ type Context interface {
 }
 
 type Host interface {
+	GetName() string
 	GetTargetHost() string
 }
 
@@ -265,8 +266,8 @@ func (ctx *SSHContext) MakeTempFile(host Host) (path string, err error) {
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error on remote host %s:\nCouldn't create temporary file using mktemp\n\nOriginal error:\n%s",
-			host.GetTargetHost(), stderr.String(),
+			"Error on remote host %s (%s):\nCouldn't create temporary file using mktemp\n\nOriginal error:\n%s",
+			host.GetName(), host.GetTargetHost(), stderr.String(),
 		)
 		return "", errors.New(errorMessage)
 	}
@@ -286,8 +287,8 @@ func (ctx *SSHContext) UploadFile(host Host, source string, destination string) 
 	data, err := cmd.CombinedOutput()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error on remote host %s:\nCouldn't upload file: %s -> %s\n\nOriginal error:\n%s",
-			host.GetTargetHost(), source, destination, string(data),
+			"Error on remote host %s (%s):\nCouldn't upload file: %s -> %s\n\nOriginal error:\n%s",
+			host.GetName(), host.GetTargetHost(), source, destination, string(data),
 		)
 		return errors.New(errorMessage)
 	}
