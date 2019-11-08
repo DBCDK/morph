@@ -159,6 +159,19 @@ in
 
     targetHost = mkOption {
       type = str;
+      default = "";
+      description = ''
+        The remote host used for deployment. If this is not set it will fallback to the deployments attribute name.
+      '';
+    };
+
+    targetUser = mkOption {
+      type = str;
+      default = "";
+      description = ''
+        The remote user used for deployment. If this is not set it will fallback to the user specified in the
+        <literal>SSH_USER</literal> environment variable or use the current local user as a last resort.
+      '';
     };
 
     buildOnly = mkOption {
