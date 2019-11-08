@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -60,7 +61,7 @@ func deploymentArg(cmd *kingpin.CmdClause) {
 	cmd.Arg("deployment", "File containing the nix deployment expression").
 		HintFiles("nix").
 		Required().
-		ExistingFileVar(&deployment)
+		ExistingFileOrDirVar(&deployment)
 }
 
 func timeoutFlag(cmd *kingpin.CmdClause) {
@@ -231,7 +232,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Deprecation: The --build-arg flag will be removed in a future release.")
 	}
 
-	hosts, err := getHosts(deployment)
+	deploymentStat, err := os.Stat(deployment)
+	if err != nil {
+		handleError(clause, nil, err)
+	}
+	if deploymentStat.IsDir() {
+		deployment = path.Join(deployment, "deployment.nix")
+	}
+
+	hosts, err := getHosts()
 	if err != nil {
 		handleError(clause, hosts, err)
 	}
@@ -503,14 +512,8 @@ func validateEnvironment() (err error) {
 	return nil
 }
 
-func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
-
-	deployment, err := os.Open(deploymentFile)
-	if err != nil {
-		return hosts, err
-	}
-
-	deploymentPath, err := filepath.Abs(deployment.Name())
+func getHosts() (hosts []nix.Host, err error) {
+	deploymentPath, err := filepath.Abs(deployment)
 	if err != nil {
 		return hosts, err
 	}
