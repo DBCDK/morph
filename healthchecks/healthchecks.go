@@ -10,7 +10,7 @@ import (
 )
 
 func Perform(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
-	fmt.Fprintf(os.Stderr, "Running healthchecks on %s:\n", host.GetTargetHost())
+	fmt.Fprintf(os.Stderr, "Running healthchecks on %s (%s):\n", host.GetName(), host.GetTargetHost())
 
 	wg := sync.WaitGroup{}
 	for _, healthCheck := range host.GetHealthChecks().Cmd {

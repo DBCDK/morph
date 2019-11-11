@@ -13,6 +13,7 @@ import (
 )
 
 type Host interface {
+	GetName() string
 	GetTargetHost() string
 	GetHealthChecks() HealthChecks
 }

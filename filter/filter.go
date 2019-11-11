@@ -9,7 +9,7 @@ func MatchHosts(allHosts []nix.Host, pattern string) (hosts []nix.Host, err erro
 	g := glob.MustCompile(pattern)
 
 	for _, host := range allHosts {
-		if g.Match(host.TargetHost) {
+		if g.Match(host.Name) {
 			hosts = append(hosts, host)
 		}
 	}
