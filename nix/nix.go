@@ -22,7 +22,7 @@ type Host struct {
 	Name                    string
 	NixosRelease            string
 	TargetHost              string
-	TargetUser				string
+	TargetUser              string
 	Secrets                 map[string]secrets.Secret
 	BuildOnly               bool
 	SubstituteOnDestination bool
