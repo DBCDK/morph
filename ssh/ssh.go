@@ -33,12 +33,13 @@ type Context interface {
 type Host interface {
 	GetName() string
 	GetTargetHost() string
+	GetTargetUser() string
 }
 
 type SSHContext struct {
 	sudoPassword       string
 	AskForSudoPassword bool
-	Username           string
+	DefaultUsername    string
 	IdentityFile       string
 	SkipHostKeyCheck   bool
 }
@@ -91,11 +92,12 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 		args = append(args, transfer.Source)
 		hostAndDestination += ":" + transfer.Destination
 	}
-	if ctx.Username != "" {
-		args = append(args, ctx.Username+"@"+hostAndDestination)
-	} else {
-		args = append(args, hostAndDestination)
+	if host.GetTargetUser() != "" {
+		hostAndDestination = host.GetTargetUser() + "@" + hostAndDestination
+	} else if ctx.DefaultUsername != "" {
+		hostAndDestination = ctx.DefaultUsername + "@" + hostAndDestination
 	}
+	args = append(args, hostAndDestination)
 
 	return
 }

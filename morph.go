@@ -394,7 +394,7 @@ func createSSHContext() *ssh.SSHContext {
 	return &ssh.SSHContext{
 		AskForSudoPassword: askForSudoPasswd,
 		IdentityFile:       os.Getenv("SSH_IDENTITY_FILE"),
-		Username:           os.Getenv("SSH_USER"),
+		DefaultUsername:    os.Getenv("SSH_USER"),
 		SkipHostKeyCheck:   os.Getenv("SSH_SKIP_HOST_KEY_CHECK") != "",
 	}
 }
@@ -588,7 +588,7 @@ func pushPaths(sshContext *ssh.SSHContext, filteredHosts []nix.Host, resultPath 
 		if err != nil {
 			return err
 		}
-		fmt.Fprintf(os.Stderr, "Pushing paths to %v (%v):\n", host.Name, host.TargetHost)
+		fmt.Fprintf(os.Stderr, "Pushing paths to %v (%v@%v):\n", host.Name, host.TargetUser, host.TargetHost)
 		for _, path := range paths {
 			fmt.Fprintf(os.Stderr, "\t* %s\n", path)
 		}

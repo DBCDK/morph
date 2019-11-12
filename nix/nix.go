@@ -22,6 +22,7 @@ type Host struct {
 	Name                    string
 	NixosRelease            string
 	TargetHost              string
+	TargetUser              string
 	Secrets                 map[string]secrets.Secret
 	BuildOnly               bool
 	SubstituteOnDestination bool
@@ -40,6 +41,10 @@ func (host *Host) GetName() string {
 
 func (host *Host) GetTargetHost() string {
 	return host.TargetHost
+}
+
+func (host *Host) GetTargetUser() string {
+	return host.TargetUser
 }
 
 func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
@@ -246,8 +251,10 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	var userArg = ""
 	var keyArg = ""
 	var env = os.Environ()
-	if ctx.Username != "" {
-		userArg = ctx.Username + "@"
+	if host.TargetUser != "" {
+		userArg = host.TargetUser + "@"
+	} else if ctx.DefaultUsername != "" {
+		userArg = ctx.DefaultUsername + "@"
 	}
 	if ctx.IdentityFile != "" {
 		keyArg = "?ssh-key=" + ctx.IdentityFile
