@@ -29,7 +29,7 @@ buildGoPackage rec {
     main.version=${version}
   '';
 
-  prePatch = ''
+  postPatch = ''
     go-bindata -pkg assets -o assets/assets.go data/
   '';
 
