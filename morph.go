@@ -534,7 +534,7 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 
 func getNixContext() *nix.NixContext {
 	return &nix.NixContext{
-		EvalMachines: filepath.Join(assetRoot, "eval-machines.nix"),
+		EvalMachines: filepath.Join(assetRoot, assets.Friendly, "eval-machines.nix"),
 		ShowTrace:    showTrace,
 		KeepGCRoot:   *keepGCRoot,
 	}
