@@ -46,7 +46,11 @@ func SignalHandler() {
 	go func() {
 		sig := <-sigs
 		fmt.Fprintf(os.Stderr, "Received signal: %s\n", sig.String())
-		RunFinalizers()
-		os.Exit(130) // reserved exit code for "Interrupted"
+		Exit(130) // reserved exit code for "Interrupted"
 	}()
+}
+
+func Exit(exitCode int) {
+	RunFinalizers()
+	os.Exit(exitCode)
 }
