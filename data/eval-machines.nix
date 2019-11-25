@@ -95,7 +95,6 @@ rec {
         mkdir -p $out
         ${toString (mapAttrsToList (nodeName: nodeDef: ''
           ln -s ${nodeDef.config.system.build.toplevel} $out/${nodeName}
-          ln -s ${nodeDef.config.system.build.toplevel.drvPath} $out/${nodeName}.drv
         '') nodes')}
       ''
       else ''
