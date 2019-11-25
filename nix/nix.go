@@ -8,6 +8,7 @@ import (
 	"github.com/dbcdk/morph/healthchecks"
 	"github.com/dbcdk/morph/secrets"
 	"github.com/dbcdk/morph/ssh"
+	"github.com/dbcdk/morph/utils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -128,6 +129,11 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err err
 	cmd.Stdout = &stdout
 	cmd.Stderr = os.Stderr
 
+	utils.AddFinalizer(func() {
+		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
+			_ = cmd.Process.Signal(syscall.SIGTERM)
+		}
+	})
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
@@ -196,6 +202,11 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	// show process output on attached stdout/stderr
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
+	utils.AddFinalizer(func() {
+		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
+			_ = cmd.Process.Signal(syscall.SIGTERM)
+		}
+	})
 	err = cmd.Run()
 
 	if err != nil {

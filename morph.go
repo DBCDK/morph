@@ -50,10 +50,10 @@ var (
 	asJson              bool
 	execute             = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
 	executeCommand      []string
+	keepGCRoot          = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
 
 	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
 	assetRoot, assetsErr = assets.Setup()
-	keepGCRoot           = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
 )
 
 func deploymentArg(cmd *kingpin.CmdClause) {
@@ -231,6 +231,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Deprecation: The --build-arg flag will be removed in a future release.")
 	}
 
+	defer utils.RunFinalizers()
+	utils.AddFinalizer(func() {
+		assets.Teardown(assetRoot)
+	})
+	utils.SignalHandler()
+
 	hosts, err := getHosts(deployment)
 	if err != nil {
 		handleError(clause, hosts, err)
@@ -260,8 +266,6 @@ func main() {
 	if err != nil {
 		handleError(clause, hosts, err)
 	}
-
-	assets.Teardown(assetRoot)
 }
 
 func handleError(cmd string, hosts []nix.Host, err error) {
