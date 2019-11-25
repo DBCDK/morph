@@ -51,7 +51,7 @@ var (
 	executeCommand      []string
 	keepGCRoot          = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
 
-	assetRoot, assetsErr = assets.Setup()
+	assetRoot string
 )
 
 func deploymentArg(cmd *kingpin.CmdClause) {
@@ -205,15 +205,34 @@ func listSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	return cmd
 }
 
-func init() {
-	if err := validateEnvironment(); err != nil {
-		panic(err)
+func setup() {
+	handleError(validateEnvironment())
+
+	utils.AddFinalizer(func() {
+		assets.Teardown(assetRoot)
+	})
+	utils.SignalHandler()
+
+	var assetErr error
+	assetRoot, assetErr = assets.Setup()
+	handleError(assetErr)
+}
+
+func validateEnvironment() (err error) {
+	dependencies := []string{"nix", "scp", "ssh"}
+	missingDepencies := make([]string, 0)
+	for _, dependency := range dependencies {
+		_, err := exec.LookPath(dependency)
+		if err != nil {
+			missingDepencies = append(missingDepencies, dependency)
+		}
 	}
 
-	if assetsErr != nil {
-		fmt.Fprintln(os.Stderr, "Error unpacking assets:")
-		panic(assetsErr)
+	if len(missingDepencies) > 0 {
+		return errors.New("Missing dependencies: " + strings.Join(missingDepencies, ", "))
 	}
+
+	return nil
 }
 
 func main() {
@@ -226,15 +245,10 @@ func main() {
 	}
 
 	defer utils.RunFinalizers()
-	utils.AddFinalizer(func() {
-		assets.Teardown(assetRoot)
-	})
-	utils.SignalHandler()
+	setup()
 
 	hosts, err := getHosts(deployment)
-	if err != nil {
-		handleError(clause, hosts, err)
-	}
+	handleError(err)
 
 	switch clause {
 	case build.FullCommand():
@@ -257,15 +271,15 @@ func main() {
 		err = execExecute(hosts)
 	}
 
-	if err != nil {
-		handleError(clause, hosts, err)
-	}
+	handleError(err)
 }
 
-func handleError(cmd string, hosts []nix.Host, err error) {
+func handleError(err error) {
 	//Stupid handling of catch-all errors for now
-	fmt.Fprint(os.Stderr, err.Error())
-	os.Exit(1)
+	if err != nil {
+		fmt.Fprint(os.Stderr, err.Error())
+		utils.Exit(1)
+	}
 }
 
 func execExecute(hosts []nix.Host) error {
@@ -378,7 +392,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			if err != nil {
 				fmt.Fprintln(os.Stderr)
 				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host health check failed.")
-				os.Exit(1)
+				utils.Exit(1)
 			}
 		}
 
@@ -480,23 +494,6 @@ func execListSecretsAsJson(hosts []nix.Host) error {
 		return err
 	}
 	fmt.Fprintf(os.Stdout, "%s\n", jsonSecrets)
-
-	return nil
-}
-
-func validateEnvironment() (err error) {
-	dependencies := []string{"nix", "scp", "ssh"}
-	missingDepencies := make([]string, 0)
-	for _, dependency := range dependencies {
-		_, err := exec.LookPath(dependency)
-		if err != nil {
-			missingDepencies = append(missingDepencies, dependency)
-		}
-	}
-
-	if len(missingDepencies) > 0 {
-		return errors.New("Missing dependencies: " + strings.Join(missingDepencies, ", "))
-	}
 
 	return nil
 }

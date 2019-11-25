@@ -170,7 +170,9 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		if err != nil {
 			return "", err
 		}
-		defer os.Remove(tmpdir)
+		utils.AddFinalizer(func() {
+			os.RemoveAll(tmpdir)
+		})
 		resultLinkPath = filepath.Join(tmpdir, "result")
 	}
 	args := []string{ctx.EvalMachines,
@@ -195,9 +197,6 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 
 	cmd := exec.Command("nix-build", args...)
-	if !ctx.KeepGCRoot {
-		defer os.Remove(resultLinkPath)
-	}
 
 	// show process output on attached stdout/stderr
 	cmd.Stdout = os.Stderr
