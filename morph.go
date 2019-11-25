@@ -12,7 +12,6 @@ import (
 	"github.com/dbcdk/morph/secrets"
 	"github.com/dbcdk/morph/ssh"
 	"github.com/dbcdk/morph/utils"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,7 +51,6 @@ var (
 	executeCommand      []string
 	keepGCRoot          = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
 
-	tempDir, tempDirErr  = ioutil.TempDir("", "morph-")
 	assetRoot, assetsErr = assets.Setup()
 )
 
@@ -215,10 +213,6 @@ func init() {
 	if assetsErr != nil {
 		fmt.Fprintln(os.Stderr, "Error unpacking assets:")
 		panic(assetsErr)
-	}
-
-	if tempDirErr != nil {
-		panic(tempDirErr)
 	}
 }
 
