@@ -2,11 +2,12 @@
 { networkExpr }:
 
 let
-  network = import networkExpr;
-  pkgs    = network.network.pkgs;
-  lib     = pkgs.lib;
+  network      = import networkExpr;
+  nwPkgs       = network.network.pkgs or {};
+  lib          = network.network.lib or nwPkgs.lib or (import <nixpkgs/lib>);
+  evalConfig   = network.network.evalConfig or "${nwPkgs.path or <nixpkgs>}/nixos/lib/eval-config.nix";
+  runCommand   = network.network.runCommand or nwPkgs.runCommand or ((import <nixpkgs> {}).runCommand);
 in
-  with pkgs;
   with lib;
 
 rec {
@@ -20,7 +21,7 @@ rec {
         modules = [ { imports = [ network.${machineName} ]; } { inherit (network) _file; } ];
       in
       { name = machineName;
-        value = import "${toString pkgs.path}/nixos/lib/eval-config.nix" {
+        value = import evalConfig {
           modules =
             modules ++
             [ ({ config, lib, options, ... }: {
@@ -31,22 +32,8 @@ rec {
                 networking.hostName = lib.mkDefault machineName;
                 deployment.targetHost = lib.mkDefault machineName;
 
-                # Apply network-level nixpkgs arguments as a baseline for
-                # per-machine nixpkgs arguments; mkDefault'ed so they
-                # can be overridden from within each machine
-                nixpkgs.localSystem = lib.mkDefault pkgs.buildPlatform;
-                nixpkgs.crossSystem = lib.mkDefault pkgs.hostPlatform;
-                nixpkgs.overlays = lib.mkDefault pkgs.overlays;
-                nixpkgs.pkgs = lib.mkDefault (import pkgs.path ({
-                  inherit (config.nixpkgs) localSystem;
-                  # Merge nixpkgs.config using its merge function
-                  config = options.nixpkgs.config.type.merge ""
-                    ([ { value = pkgs.config; } options.nixpkgs.config ]);
-                } // lib.optionalAttrs (config.nixpkgs.localSystem != config.nixpkgs.crossSystem) {
-                  # Only override crossSystem if it is not equivalent to
-                  # localSystem; works around issue #68
-                  inherit (config.nixpkgs) crossSystem;
-                }));
+                # If network.pkgs is set, mkDefault nixpkgs.pkgs
+                nixpkgs.pkgs = lib.mkIf (nwPkgs != {}) (lib.mkDefault nwPkgs);
               })
             ];
           extraArgs = { inherit nodes ; name = machineName; };
@@ -88,7 +75,7 @@ rec {
   # Phase 2: build complete machine configurations.
   machines = { names, buildTargets ? null }:
     let nodes' = filterAttrs (n: v: elem n names) nodes; in
-    pkgs.runCommand "morph"
+    runCommand "morph"
       { preferLocalBuild = true; }
       (if buildTargets == null
       then ''
