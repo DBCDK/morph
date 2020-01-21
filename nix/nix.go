@@ -253,6 +253,8 @@ func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
 }
 
 func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
+	utils.ValidateEnvironment("ssh")
+
 	var userArg = ""
 	var keyArg = ""
 	var env = os.Environ()

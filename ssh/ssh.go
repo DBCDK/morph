@@ -77,6 +77,7 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 	} else {
 		cmd = "ssh"
 	}
+	utils.ValidateEnvironment(cmd)
 
 	if ctx.SkipHostKeyCheck {
 		args = append(args,
