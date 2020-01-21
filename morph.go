@@ -13,7 +13,6 @@ import (
 	"github.com/dbcdk/morph/ssh"
 	"github.com/dbcdk/morph/utils"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -206,7 +205,7 @@ func listSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 }
 
 func setup() {
-	handleError(validateEnvironment())
+	utils.ValidateEnvironment("nix")
 
 	utils.AddFinalizer(func() {
 		assets.Teardown(assetRoot)
@@ -218,22 +217,7 @@ func setup() {
 	handleError(assetErr)
 }
 
-func validateEnvironment() (err error) {
-	dependencies := []string{"nix", "scp", "ssh"}
-	missingDepencies := make([]string, 0)
-	for _, dependency := range dependencies {
-		_, err := exec.LookPath(dependency)
-		if err != nil {
-			missingDepencies = append(missingDepencies, dependency)
-		}
-	}
 
-	if len(missingDepencies) > 0 {
-		return errors.New("Missing dependencies: " + strings.Join(missingDepencies, ", "))
-	}
-
-	return nil
-}
 
 func main() {
 
