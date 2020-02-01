@@ -4,6 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"github.com/dbcdk/kingpin"
 	"github.com/dbcdk/morph/assets"
 	"github.com/dbcdk/morph/filter"
@@ -12,10 +18,6 @@ import (
 	"github.com/dbcdk/morph/secrets"
 	"github.com/dbcdk/morph/ssh"
 	"github.com/dbcdk/morph/utils"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 // This is set at build time via -ldflags magic
@@ -604,6 +606,24 @@ func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host) error {
 		fmt.Fprintf(os.Stderr, "Uploading secrets to %s (%s):\n", host.Name, host.TargetHost)
 		postUploadActions := make(map[string][]string, 0)
 		for secretName, secret := range host.Secrets {
+			secretFile := secret.Source
+			if strings.HasPrefix(secretFile, "sops:") {
+				// make a temporary file, to be deleted after upload
+				f, err := ioutil.TempFile("", "*")
+				if err != nil {
+					return err
+				}
+				secretFile = f.Name()
+				f.Close()
+				defer func() {
+					os.Remove(secretFile)
+				}()
+				err = secrets.ExtractSopsSecret(secret.Source, deploymentDir, secretFile)
+				if err != nil {
+					return err
+				}
+			}
+			secret.Source = secretFile
 			secretSize, err := secrets.GetSecretSize(secret, deploymentDir)
 			if err != nil {
 				return err
