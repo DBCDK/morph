@@ -408,6 +408,7 @@ func createSSHContext() *ssh.SSHContext {
 		IdentityFile:       os.Getenv("SSH_IDENTITY_FILE"),
 		DefaultUsername:    os.Getenv("SSH_USER"),
 		SkipHostKeyCheck:   os.Getenv("SSH_SKIP_HOST_KEY_CHECK") != "",
+		ConfigFile:         os.Getenv("SSH_CONFIG_FILE"),
 	}
 }
 
