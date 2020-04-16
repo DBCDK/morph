@@ -18,7 +18,7 @@ buildGoPackage rec {
 
   goPackagePath = "github.com/dbcdk/morph";
 
-  buildInputs = [ go-bindata ];
+  nativeBuildInputs = [ go-bindata ];
 
   src = filterSource srcFilter ./..;
   goDeps = ./deps.nix;
