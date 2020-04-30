@@ -27,6 +27,9 @@ rec {
             [ ({ config, lib, options, ... }: {
                 key = "deploy-stuff";
                 imports = [ ./options.nix ];
+                # Make documentation builds deterministic, even with our
+                # tempdir module imports.
+                documentation.nixos.extraModuleSources = [ ../. ];
                 # Provide a default hostname and deployment target equal
                 # to the attribute name of the machine in the model.
                 networking.hostName = lib.mkDefault machineName;

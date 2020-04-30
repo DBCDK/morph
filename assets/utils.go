@@ -6,8 +6,16 @@ import (
 	"path/filepath"
 )
 
+const Friendly string = "morph"
+
 func Setup() (assetRoot string, err error) {
 	assetRoot, err = ioutil.TempDir("", "morph-")
+	if err != nil {
+		return "", err
+	}
+
+	assetFriendlyRoot := filepath.Join(assetRoot, Friendly)
+	err = os.Mkdir(assetFriendlyRoot, 0755)
 	if err != nil {
 		return "", err
 	}
@@ -22,8 +30,8 @@ func Setup() (assetRoot string, err error) {
 		return "", err
 	}
 
-	evalMachinesPath := filepath.Join(assetRoot, "eval-machines.nix")
-	optionsPath := filepath.Join(assetRoot, "options.nix")
+	evalMachinesPath := filepath.Join(assetFriendlyRoot, "eval-machines.nix")
+	optionsPath := filepath.Join(assetFriendlyRoot, "options.nix")
 	ioutil.WriteFile(evalMachinesPath, evalMachinesData, 0644)
 	ioutil.WriteFile(optionsPath, optionsData, 0644)
 
@@ -31,12 +39,19 @@ func Setup() (assetRoot string, err error) {
 }
 
 func Teardown(assetRoot string) (err error) {
-	err = os.Remove(filepath.Join(assetRoot, "eval-machines.nix"))
+	assetFriendlyRoot := filepath.Join(assetRoot, Friendly)
+
+	err = os.Remove(filepath.Join(assetFriendlyRoot, "eval-machines.nix"))
 	if err != nil {
 		return err
 	}
 
-	err = os.Remove(filepath.Join(assetRoot, "options.nix"))
+	err = os.Remove(filepath.Join(assetFriendlyRoot, "options.nix"))
+	if err != nil {
+		return err
+	}
+
+	err = os.Remove(assetFriendlyRoot)
 	if err != nil {
 		return err
 	}
