@@ -38,7 +38,7 @@ buildGoPackage rec {
     cp -v $src/data/*.nix $lib
   '';
 
-  outputs = [ "out" "bin" "lib" ];
+  outputs = [ "out" "lib" ];
 
   meta = {
     homepage = "https://github.com/dbcdk/morph";
