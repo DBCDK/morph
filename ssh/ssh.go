@@ -41,6 +41,7 @@ type SSHContext struct {
 	AskForSudoPassword bool
 	DefaultUsername    string
 	IdentityFile       string
+	ConfigFile         string
 	SkipHostKeyCheck   bool
 }
 
@@ -87,6 +88,9 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 	if ctx.IdentityFile != "" {
 		args = append(args, "-i")
 		args = append(args, ctx.IdentityFile)
+	}
+	if ctx.ConfigFile != "" {
+		args = append(args, "-F", ctx.ConfigFile)
 	}
 	var hostAndDestination = host.GetTargetHost()
 	if transfer != nil {

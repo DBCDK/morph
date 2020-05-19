@@ -122,6 +122,7 @@ Morph supports the following (optional) environment variables:
 - `SSH_IDENTITY_FILE` the (local) path to the SSH private key file that should be used
 - `SSH_USER` specifies the user that should be used to connect to the remote system
 - `SSH_SKIP_HOST_KEY_CHECK` if set disables host key verification
+- `SSH_CONFIG_FILE` allows to change the location of the ~/.ssh/config file
 
 ### Secrets
 
