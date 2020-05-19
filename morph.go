@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/dbcdk/kingpin"
 	"github.com/dbcdk/morph/assets"
 	"github.com/dbcdk/morph/filter"
@@ -12,9 +16,6 @@ import (
 	"github.com/dbcdk/morph/secrets"
 	"github.com/dbcdk/morph/ssh"
 	"github.com/dbcdk/morph/utils"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // This is set at build time via -ldflags magic

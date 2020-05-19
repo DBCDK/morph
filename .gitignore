@@ -3,6 +3,8 @@
 *.iml
 .idea
 
+bindata.go
+
 # Default binary output file name
 /morph
 
