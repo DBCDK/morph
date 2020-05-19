@@ -6,9 +6,9 @@ let
   packagingOut = "./nix-packaging";
 
   shellHook = ''
-    if [[ -f ./result-bin/bin/morph ]]; then
+    if [[ -f ./result/bin/morph ]]; then
       if [[ `${which} morph 2>&1 >/dev/null` ]]; then
-        export PATH=$PATH:$(pwd)/result-bin/bin
+        export PATH=$PATH:$(pwd)/result/bin
       fi
       source <(morph --completion-script-bash)
     fi
@@ -38,7 +38,7 @@ let
     outpath="$(readlink -f ${packagingOut})/deps.nix"
 
     ${nix}/bin/nix-build -E 'with import <nixpkgs> {};
-      callPackage ./nix-packaging/default.nix {}' -A bin $@
+      callPackage ./nix-packaging/default.nix {}' -A out $@
 
     make-env
   '';
