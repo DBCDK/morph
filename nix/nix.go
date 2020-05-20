@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/dbcdk/morph/healthchecks"
+	"github.com/dbcdk/morph/secrets"
+	"github.com/dbcdk/morph/ssh"
+	"github.com/dbcdk/morph/utils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -12,11 +16,6 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
-
-	"github.com/dbcdk/morph/healthchecks"
-	"github.com/dbcdk/morph/secrets"
-	"github.com/dbcdk/morph/ssh"
-	"github.com/dbcdk/morph/utils"
 )
 
 type Host struct {
@@ -267,29 +266,8 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	if ctx.IdentityFile != "" {
 		keyArg = "?ssh-key=" + ctx.IdentityFile
 	}
-
-	var sshOpts = ""
-
 	if ctx.SkipHostKeyCheck {
-		sshOpts = fmt.Sprintf(
-			"NIX_SSHOPTS=%s",
-			"-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null",
-		)
-	}
-
-	target, port := utils.SplitHost(host.TargetHost)
-	if port != "" {
-		if sshOpts == "" {
-			sshOpts += "NIX_SSHOPTS="
-		} else {
-			sshOpts += " "
-		}
-
-		sshOpts += "-p " + port
-	}
-
-	if sshOpts != "" {
-		env = append(env, sshOpts)
+		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s", "-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
 	}
 
 	options := mkOptions(host)
@@ -297,7 +275,7 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 		args := []string{
 			"copy",
 			path,
-			"--to", "ssh://" + userArg + target + keyArg,
+			"--to", "ssh://" + userArg + host.TargetHost + keyArg,
 		}
 		args = append(args, options...)
 		if host.SubstituteOnDestination {
