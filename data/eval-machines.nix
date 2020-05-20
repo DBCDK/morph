@@ -5,7 +5,7 @@ let
   network      = import networkExpr;
   nwPkgs       = network.network.pkgs or {};
   lib          = network.network.lib or nwPkgs.lib or (import <nixpkgs/lib>);
-  evalConfig   = network.network.evalConfig or "${nwPkgs.path or <nixpkgs>}/nixos/lib/eval-config.nix";
+  evalConfig   = network.network.evalConfig or ((nwPkgs.path or <nixpkgs>) + "/nixos/lib/eval-config.nix");
   runCommand   = network.network.runCommand or nwPkgs.runCommand or ((import <nixpkgs> {}).runCommand);
 in
   with lib;
