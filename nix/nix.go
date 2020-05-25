@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+  "strings"
 )
 
 type Host struct {
@@ -34,6 +35,10 @@ type NixContext struct {
 	EvalMachines string
 	ShowTrace    bool
 	KeepGCRoot   bool
+}
+
+type FileArgs struct {
+	Names []string
 }
 
 func (host *Host) GetName() string {
@@ -112,6 +117,44 @@ func (host *Host) Reboot(sshContext *ssh.SSHContext) error {
 	return nil
 }
 
+func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string, err error) {
+
+	args := []string{"eval",
+		"-f", ctx.EvalMachines, "info.buildShell",
+		"--arg", "networkExpr", deploymentPath,
+		"--json"}
+
+	if ctx.ShowTrace {
+		args = append(args, "--show-trace")
+	}
+
+	cmd := exec.Command("nix", args...)
+
+	var stdout bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = os.Stderr
+
+	utils.AddFinalizer(func() {
+		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
+			_ = cmd.Process.Signal(syscall.SIGTERM)
+		}
+	})
+	err = cmd.Run()
+	if err != nil {
+		errorMessage := fmt.Sprintf(
+			"Error while running `nix eval ..`: %s", err.Error(),
+		)
+		return buildShell, errors.New(errorMessage)
+	}
+
+	err = json.Unmarshal(stdout.Bytes(), &buildShell)
+	if err != nil {
+		return nil, err
+	}
+
+	return buildShell, nil
+}
+
 func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err error) {
 
 	args := []string{"eval",
@@ -151,11 +194,33 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err err
 }
 
 func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (resultPath string, err error) {
-	hostsArg := "["
-	for _, host := range hosts {
-		hostsArg += "\"" + host.Name + "\" "
+	tmpdir, err := ioutil.TempDir("", "morph-")
+	if err != nil {
+		return "", err
 	}
-	hostsArg += "]"
+	utils.AddFinalizer(func() {
+		os.RemoveAll(tmpdir)
+	})
+
+	hostsArg := []string{}
+	for _, host := range hosts {
+		hostsArg = append(hostsArg, host.Name)
+	}
+
+	fileArgs := FileArgs{
+		Names: hostsArg,
+	}
+
+	jsonArgs, err := json.Marshal(fileArgs)
+	if err != nil {
+		return "", err
+	}
+	argsFile := tmpdir + "/morph-args.json"
+
+	err = ioutil.WriteFile(argsFile, jsonArgs, 0644)
+	if err != nil {
+		return "", err
+	}
 
 	resultLinkPath := filepath.Join(path.Dir(deploymentPath), ".gcroots", path.Base(deploymentPath))
 	if ctx.KeepGCRoot {
@@ -166,19 +231,12 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 	if !ctx.KeepGCRoot {
 		// create tmp dir for result link
-		tmpdir, err := ioutil.TempDir("", "morph-")
-		if err != nil {
-			return "", err
-		}
-		utils.AddFinalizer(func() {
-			os.RemoveAll(tmpdir)
-		})
 		resultLinkPath = filepath.Join(tmpdir, "result")
 	}
 	args := []string{ctx.EvalMachines,
 		"-A", "machines",
 		"--arg", "networkExpr", deploymentPath,
-		"--arg", "names", hostsArg,
+		"--argstr", "argsFile", argsFile,
 		"--out-link", resultLinkPath}
 
 	args = append(args, mkOptions(hosts[0])...)
@@ -196,7 +254,22 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 			"--arg", "buildTargets", nixBuildTargets)
 	}
 
-	cmd := exec.Command("nix-build", args...)
+	buildShell, err := ctx.GetBuildShell(deploymentPath)
+
+	if err != nil {
+		errorMessage := fmt.Sprintf(
+			"Error getting buildShell.",
+		)
+		return resultPath, errors.New(errorMessage)
+	}
+
+	var cmd *exec.Cmd
+	if buildShell != nil {
+		shellArgs := strings.Join(append([]string{"nix-build"},args...), " ")
+		cmd = exec.Command("nix-shell", *buildShell, "--run", shellArgs)
+	} else {
+		cmd = exec.Command("nix-build", args...)
+	}
 
 	// show process output on attached stdout/stderr
 	cmd.Stdout = os.Stderr
@@ -210,7 +283,7 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix build ...`: See above.",
+			"Error while running `%s ...`: See above.", cmd.String(),
 		)
 		return resultPath, errors.New(errorMessage)
 	}
