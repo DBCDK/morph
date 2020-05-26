@@ -187,7 +187,7 @@ machine2 = { ... }: {
 
 ## Hacking morph
 
-All commands mentioned below is available in the nix-shell, if you run `nix-shell` with working dir = project root.
+All commands mentioned below is available in the nix-shell, if you run `nix-shell` with working dir = project root. The included `shell.nix` uses the latest `nixos-unstable` from GitHub by default, but you can override this by passing in another, eg. `nix-shell --arg nixpkgs '<nixpkgs>'` for your `$NIX_PATH` nixpkgs.
 
 
 ### Go dependency management
