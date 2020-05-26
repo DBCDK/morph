@@ -73,11 +73,14 @@ rec {
 
     machineList = (map (key: getAttr key machines) (attrNames machines));
     network = network'.network or {};
+    buildShell = network.buildShell.drvPath or null;
   };
 
   # Phase 2: build complete machine configurations.
-  machines = { names, buildTargets ? null }:
-    let nodes' = filterAttrs (n: v: elem n names) nodes; in
+  machines = { argsFile, buildTargets ? null }:
+    let
+      fileArgs = builtins.fromJSON (builtins.readFile argsFile);
+      nodes' = filterAttrs (n: v: elem n fileArgs.Names) nodes; in
     runCommand "morph"
       { preferLocalBuild = true; }
       (if buildTargets == null
