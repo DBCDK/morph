@@ -14,9 +14,9 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
-  "strings"
 )
 
 type Host struct {
@@ -265,7 +265,7 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	var cmd *exec.Cmd
 	if buildShell != nil {
-		shellArgs := strings.Join(append([]string{"nix-build"},args...), " ")
+		shellArgs := strings.Join(append([]string{"nix-build"}, args...), " ")
 		cmd = exec.Command("nix-shell", *buildShell, "--run", shellArgs)
 	} else {
 		cmd = exec.Command("nix-build", args...)
