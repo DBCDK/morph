@@ -32,9 +32,10 @@ type Host struct {
 }
 
 type NixContext struct {
-	EvalMachines string
-	ShowTrace    bool
-	KeepGCRoot   bool
+	EvalMachines    string
+	ShowTrace       bool
+	KeepGCRoot      bool
+	AllowBuildShell bool
 }
 
 type FileArgs struct {
@@ -264,7 +265,7 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	}
 
 	var cmd *exec.Cmd
-	if buildShell != nil {
+	if ctx.AllowBuildShell && buildShell != nil {
 		shellArgs := strings.Join(append([]string{"nix-build"}, args...), " ")
 		cmd = exec.Command("nix-shell", *buildShell, "--run", shellArgs)
 	} else {
