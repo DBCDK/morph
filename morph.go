@@ -49,6 +49,7 @@ var (
 	execute             = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
 	executeCommand      []string
 	keepGCRoot          = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
+	allowBuildShell     = app.Flag("allow-build-shell", "Allow using `network.buildShell` to build in a nix-shell which can execute arbitrary commands on the local system").Default("False").Bool()
 
 	assetRoot string
 )
@@ -519,9 +520,10 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 
 func getNixContext() *nix.NixContext {
 	return &nix.NixContext{
-		EvalMachines: filepath.Join(assetRoot, assets.Friendly, "eval-machines.nix"),
-		ShowTrace:    showTrace,
-		KeepGCRoot:   *keepGCRoot,
+		EvalMachines:    filepath.Join(assetRoot, assets.Friendly, "eval-machines.nix"),
+		ShowTrace:       showTrace,
+		KeepGCRoot:      *keepGCRoot,
+		AllowBuildShell: *allowBuildShell,
 	}
 }
 
