@@ -158,6 +158,9 @@ It is currently possible to have expressions like `"test \"$(systemctl list-unit
 Note: these options apply to an entire deployment and are *not* configurable on per-host basis.
 The default is an empty set, meaning that the nix configuration is inherited from the build environment. See `man nix.conf`.
 
+**network.buildShell**
+By passing `--allow-build-shell` and setting `network.buildShell` to a nix-shell compatible derivation (eg. `pkgs.mkShell ...`), it's possible to make morph execute builds from within the defined shell. This makes it possible to have arbitrary dependencies available during the build, say for use with nix build hooks. Be aware that the shell can potentially execute any command on the local system.
+
 **special deployment options:**
 
 (per-host granularity)
