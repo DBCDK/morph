@@ -25,7 +25,7 @@ var (
 	app                 = kingpin.New("morph", "NixOS host manager").Version(version)
 	dryRun              = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
 	selectGlob          string
-	selectTag           string
+	selectTags          string
 	selectEvery         int
 	selectSkip          int
 	selectLimit         int
@@ -82,7 +82,7 @@ func selectorFlags(cmd *kingpin.CmdClause) {
 		StringVar(&selectGlob)
 	cmd.Flag("tagged", "Select hosts with these tags").
 		Default("").
-		StringVar(&selectTag)
+		StringVar(&selectTags)
 	cmd.Flag("every", "Select every n hosts").
 		Default("1").
 		IntVar(&selectEvery)
@@ -513,7 +513,12 @@ func getHosts(deploymentPath string) (hosts []nix.Host, err error) {
 		return hosts, err
 	}
 
-	matchingHosts2 := filter.FilterHostsTags(matchingHosts, selectTag)
+	var selectedTags []string
+	if selectTags != "" {
+		selectedTags = strings.Split(selectTags, ",")
+	}
+
+	matchingHosts2 := filter.FilterHostsTags(matchingHosts, selectedTags)
 
 	ordering := deployment.Meta.Ordering
 	if orderingTags != "" {
