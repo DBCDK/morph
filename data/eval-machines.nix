@@ -73,6 +73,14 @@ rec {
 
     machineList = (map (key: getAttr key machines) (attrNames machines));
     network = network'.network or {};
+    deployment = {
+      hosts = machineList;
+      meta = {
+        description = network.description or "";
+        ordering = network.ordering or {};
+      };
+    };
+
     buildShell = network.buildShell.drvPath or null;
   };
 
