@@ -29,6 +29,7 @@ type Host struct {
 	BuildOnly               bool
 	SubstituteOnDestination bool
 	NixConfig               map[string]string
+	Tags                    []string
 }
 
 type NixContext struct {
@@ -56,6 +57,10 @@ func (host *Host) GetTargetUser() string {
 
 func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
 	return host.HealthChecks
+}
+
+func (host *Host) GetTags() []string {
+	return host.Tags
 }
 
 func (host *Host) Reboot(sshContext *ssh.SSHContext) error {

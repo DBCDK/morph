@@ -25,6 +25,7 @@ var (
 	app                 = kingpin.New("morph", "NixOS host manager").Version(version)
 	dryRun              = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
 	selectGlob          string
+	selectTag           string
 	selectEvery         int
 	selectSkip          int
 	selectLimit         int
@@ -78,6 +79,9 @@ func selectorFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("on", "Glob for selecting servers in the deployment").
 		Default("*").
 		StringVar(&selectGlob)
+	cmd.Flag("tagged", "Select hosts with these tags").
+		Default("").
+		StringVar(&selectTag)
 	cmd.Flag("every", "Select every n hosts").
 		Default("1").
 		IntVar(&selectEvery)
@@ -217,8 +221,6 @@ func setup() {
 	assetRoot, assetErr = assets.Setup()
 	handleError(assetErr)
 }
-
-
 
 func main() {
 
@@ -507,11 +509,13 @@ func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
 		return hosts, err
 	}
 
-	filteredHosts := filter.FilterHosts(matchingHosts, selectSkip, selectEvery, selectLimit)
+	matchingHosts2 := filter.FilterHostsTags(matchingHosts, selectTag)
+
+	filteredHosts := filter.FilterHosts(matchingHosts2, selectSkip, selectEvery, selectLimit)
 
 	fmt.Fprintf(os.Stderr, "Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d)\n", index, host.Name, len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
+		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d, tags: %s)\n", index, host.Name, len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http), strings.Join(host.GetTags(), ","))
 	}
 	fmt.Fprintln(os.Stderr)
 
