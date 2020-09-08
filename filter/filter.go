@@ -37,18 +37,33 @@ func FilterHosts(allHosts []nix.Host, skip int, every int, limit int) (hosts []n
 	}
 }
 
+func hasTag(host nix.Host, tag string) bool {
+	for _, hostTag := range host.GetTags() {
+		if hostTag == tag {
+			return true
+		}
+	}
+
+	return false
+}
+
 func FilterHostsTags(allHosts []nix.Host, selectedTags []string) (hosts []nix.Host) {
 	if len(selectedTags) == 0 {
 		return allHosts
 	}
+
 	for _, host := range allHosts {
-		for _, tag := range host.GetTags() {
-			for _, selectTag := range selectedTags {
-				if tag == selectTag {
-					hosts = append(hosts, host)
-					break
-				}
+		include := true
+		for _, selectTag := range selectedTags {
+			if !hasTag(host, selectTag) {
+				include = false;
+				break
 			}
+
+		}
+
+		if include {
+			hosts = append(hosts, host)
 		}
 	}
 
