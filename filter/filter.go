@@ -36,3 +36,79 @@ func FilterHosts(allHosts []nix.Host, skip int, every int, limit int) (hosts []n
 		return hosts
 	}
 }
+
+func hasTag(host nix.Host, tag string) bool {
+	for _, hostTag := range host.GetTags() {
+		if hostTag == tag {
+			return true
+		}
+	}
+
+	return false
+}
+
+func FilterHostsTags(allHosts []nix.Host, selectedTags []string) (hosts []nix.Host) {
+	if len(selectedTags) == 0 {
+		return allHosts
+	}
+
+	for _, host := range allHosts {
+		include := true
+		for _, selectTag := range selectedTags {
+			if !hasTag(host, selectTag) {
+				include = false;
+				break
+			}
+
+		}
+
+		if include {
+			hosts = append(hosts, host)
+		}
+	}
+
+	return
+}
+
+// Split a list of hosts into two lists based on whether the hosts contain af specific tag.
+func splitByTag(hosts []nix.Host, requiredTag string) (hostsWithTag []nix.Host, hostsWithoutTag []nix.Host) {
+	for _, host := range hosts {
+		hasTag := false
+		for _, tag := range host.Tags {
+			if tag == requiredTag {
+				hasTag = true
+				break
+			}
+		}
+
+		if hasTag {
+			hostsWithTag = append(hostsWithTag, host)
+		} else {
+			hostsWithoutTag = append(hostsWithoutTag, host)
+		}
+	}
+
+	return
+}
+
+// Sort a list of hosts based on their tags and a prioritized list of tags.
+func SortHosts(hosts []nix.Host, ordering nix.HostOrdering) (sortedHosts []nix.Host) {
+	remainingHosts := hosts
+	var withTag []nix.Host
+
+	// For each ordering tag: Split the list of unsorted hosts into a list with and a list without the tag.
+	// Add the "with" hosts to the list of sorted hosts, and repeat the loop with the "without" hosts as the remaning
+	// hosts.
+	// This ensures each host is only added once, and preserving the original ordering in case multiple hosts contain
+	// the same tag.
+
+	for _, orderingTag := range ordering.Tags {
+		withTag, remainingHosts = splitByTag(remainingHosts, orderingTag)
+		sortedHosts = append(sortedHosts, withTag...)
+	}
+
+	// `remainingHosts` is now the list of hosts that didn't match any of the ordering tags. Add them last.
+	sortedHosts = append(sortedHosts, remainingHosts...)
+
+	return
+}

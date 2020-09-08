@@ -25,9 +25,11 @@ var (
 	app                 = kingpin.New("morph", "NixOS host manager").Version(version)
 	dryRun              = app.Flag("dry-run", "Don't do anything, just eval and print changes").Default("False").Bool()
 	selectGlob          string
+	selectTags          string
 	selectEvery         int
 	selectSkip          int
 	selectLimit         int
+	orderingTags        string
 	deployment          string
 	timeout             int
 	askForSudoPasswd    bool
@@ -78,6 +80,9 @@ func selectorFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("on", "Glob for selecting servers in the deployment").
 		Default("*").
 		StringVar(&selectGlob)
+	cmd.Flag("tagged", "Select hosts with these tags").
+		Default("").
+		StringVar(&selectTags)
 	cmd.Flag("every", "Select every n hosts").
 		Default("1").
 		IntVar(&selectEvery)
@@ -86,6 +91,9 @@ func selectorFlags(cmd *kingpin.CmdClause) {
 		IntVar(&selectSkip)
 	cmd.Flag("limit", "Select at most n hosts").
 		IntVar(&selectLimit)
+	cmd.Flag("order-by-tags", "Order hosts by tags (comma separated list)").
+		Default("").
+		StringVar(&orderingTags)
 }
 
 func nixBuildArgFlag(cmd *kingpin.CmdClause) {
@@ -217,8 +225,6 @@ func setup() {
 	assetRoot, assetErr = assets.Setup()
 	handleError(assetErr)
 }
-
-
 
 func main() {
 
@@ -484,34 +490,48 @@ func execListSecretsAsJson(hosts []nix.Host) error {
 	return nil
 }
 
-func getHosts(deploymentFile string) (hosts []nix.Host, err error) {
+func getHosts(deploymentPath string) (hosts []nix.Host, err error) {
 
-	deployment, err := os.Open(deploymentFile)
+	deploymentFile, err := os.Open(deploymentPath)
 	if err != nil {
 		return hosts, err
 	}
 
-	deploymentPath, err := filepath.Abs(deployment.Name())
+	deploymentAbsPath, err := filepath.Abs(deploymentFile.Name())
 	if err != nil {
 		return hosts, err
 	}
 
 	ctx := getNixContext()
-	allHosts, err := ctx.GetMachines(deploymentPath)
+	deployment, err := ctx.GetMachines(deploymentAbsPath)
 	if err != nil {
 		return hosts, err
 	}
 
-	matchingHosts, err := filter.MatchHosts(allHosts, selectGlob)
+	matchingHosts, err := filter.MatchHosts(deployment.Hosts, selectGlob)
 	if err != nil {
 		return hosts, err
 	}
 
-	filteredHosts := filter.FilterHosts(matchingHosts, selectSkip, selectEvery, selectLimit)
+	var selectedTags []string
+	if selectTags != "" {
+		selectedTags = strings.Split(selectTags, ",")
+	}
 
-	fmt.Fprintf(os.Stderr, "Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(allHosts), len(allHosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
+	matchingHosts2 := filter.FilterHostsTags(matchingHosts, selectedTags)
+
+	ordering := deployment.Meta.Ordering
+	if orderingTags != "" {
+		ordering = nix.HostOrdering{Tags: strings.Split(orderingTags, ",")}
+	}
+
+	sortedHosts := filter.SortHosts(matchingHosts2, ordering)
+
+	filteredHosts := filter.FilterHosts(sortedHosts, selectSkip, selectEvery, selectLimit)
+
+	fmt.Fprintf(os.Stderr, "Selected %v/%v hosts (name filter:-%v, limits:-%v):\n", len(filteredHosts), len(deployment.Hosts), len(deployment.Hosts)-len(matchingHosts), len(matchingHosts)-len(filteredHosts))
 	for index, host := range filteredHosts {
-		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d)\n", index, host.Name, len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http))
+		fmt.Fprintf(os.Stderr, "\t%3d: %s (secrets: %d, health checks: %d, tags: %s)\n", index, host.Name, len(host.Secrets), len(host.HealthChecks.Cmd)+len(host.HealthChecks.Http), strings.Join(host.GetTags(), ","))
 	}
 	fmt.Fprintln(os.Stderr)
 

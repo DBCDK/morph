@@ -62,7 +62,7 @@ rec {
 
     machines =
       flip mapAttrs nodes (n: v': let v = scrubOptionValue v'; in
-        { inherit (v.config.deployment) targetHost targetUser secrets healthChecks buildOnly substituteOnDestination;
+        { inherit (v.config.deployment) targetHost targetUser secrets healthChecks buildOnly substituteOnDestination tags;
           name = n;
           nixosRelease = v.config.system.nixos.release or (removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
           nixConfig = mapAttrs
@@ -73,6 +73,14 @@ rec {
 
     machineList = (map (key: getAttr key machines) (attrNames machines));
     network = network'.network or {};
+    deployment = {
+      hosts = machineList;
+      meta = {
+        description = network.description or "";
+        ordering = network.ordering or {};
+      };
+    };
+
     buildShell = network.buildShell.drvPath or null;
   };
 

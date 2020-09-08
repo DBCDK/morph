@@ -221,6 +221,14 @@ in
       '';
       default = {};
     };
+
+    tags = mkOption {
+      type = listOf str;
+      default = [];
+      description = ''
+        Host tags.
+      '';
+    };
   };
 
   # Creates a txt-file that lists all system healthcheck commands

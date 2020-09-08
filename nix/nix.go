@@ -29,6 +29,21 @@ type Host struct {
 	BuildOnly               bool
 	SubstituteOnDestination bool
 	NixConfig               map[string]string
+	Tags                    []string
+}
+
+type HostOrdering struct {
+	Tags []string
+}
+
+type DeploymentMetadata struct {
+	Description string
+	Ordering    HostOrdering
+}
+
+type Deployment struct {
+	Hosts []Host             `json:"hosts"`
+	Meta  DeploymentMetadata `json:"meta"`
 }
 
 type NixContext struct {
@@ -56,6 +71,10 @@ func (host *Host) GetTargetUser() string {
 
 func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
 	return host.HealthChecks
+}
+
+func (host *Host) GetTags() []string {
+	return host.Tags
 }
 
 func (host *Host) Reboot(sshContext *ssh.SSHContext) error {
@@ -156,10 +175,10 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	return buildShell, nil
 }
 
-func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err error) {
+func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {
 
 	args := []string{"eval",
-		"-f", ctx.EvalMachines, "info.machineList",
+		"-f", ctx.EvalMachines, "info.deployment",
 		"--arg", "networkExpr", deploymentPath,
 		"--json"}
 
@@ -183,15 +202,15 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (hosts []Host, err err
 		errorMessage := fmt.Sprintf(
 			"Error while running `nix eval ..`: %s", err.Error(),
 		)
-		return hosts, errors.New(errorMessage)
+		return deployment, errors.New(errorMessage)
 	}
 
-	err = json.Unmarshal(stdout.Bytes(), &hosts)
+	err = json.Unmarshal(stdout.Bytes(), &deployment)
 	if err != nil {
-		return hosts, err
+		return deployment, err
 	}
 
-	return hosts, nil
+	return deployment, nil
 }
 
 func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (resultPath string, err error) {

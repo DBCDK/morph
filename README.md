@@ -115,6 +115,16 @@ Selected 4/17 hosts (name filter:-6, limits:-7):
 The output is pretty self explanatory, except probably for the last bit of the first line.
 `name filter` shows the change in number of hosts after glob matching on the hosts name, and `limits` shows the change after applying `--limit`, `--skip` and `--every`.
 
+
+#### Tagging hosts
+
+Each host can be tagged with an arbitrary amount of tags, which can be used to select and sort hosts.
+
+To tag a host, use the `deployment.tags` option, e.g. `deployment.tags = [ "prod" "master" "rack-17" ]`. Hosts can now be selected with the `--tagged` option, e.g.`--tagged="prod,master"` will only select hosts tagged _both_ `prod` _and_ `master`.
+
+To sort hosts based on tags, use the `network.ordering.tags` option, e.g. `network.ordering.tags = [ "master" "slave"]`. This ordering can be changed at runtime using the `--order-by-tags` option, eg. `--order-by-tags="slave,master"` (this also works when `network.ordering.tags` isn't defined). Hosts without matching tags will end up at the end of the list.
+
+
 ### Environment Variables
 
 Morph supports the following (optional) environment variables:
