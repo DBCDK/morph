@@ -34,11 +34,9 @@ rec {
                 # to the attribute name of the machine in the model.
                 networking.hostName = lib.mkDefault machineName;
                 deployment.targetHost = lib.mkDefault machineName;
-
-                # If network.pkgs is set, mkDefault nixpkgs.pkgs
-                nixpkgs.pkgs = lib.mkIf (nwPkgs != {}) (lib.mkDefault nwPkgs);
               })
             ];
+          pkgs = lib.mkIf (nwPkgs != {}) nwPkgs;
           extraArgs = { inherit nodes ; name = machineName; };
         };
       }
