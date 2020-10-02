@@ -19,6 +19,10 @@ rec {
         # expression, attaching _file attributes so the NixOS module
         # system can give sensible error messages.
         modules = [ { imports = [ network.${machineName} ]; } { inherit (network) _file; } ];
+        # TODO: Please help how to test the string for beeing a FQDN vs an IP address?!?
+        hostName = builtins.head (lib.splitString "." machineName);
+        # TODO: Please help how to set null in case of an empty list/no-domain (the default)
+        domain = builtins.concatStringsSep "." (builtins.drop 1 (lib.splitString "." machineName));
       in
       { name = machineName;
         value = import evalConfig {
@@ -32,7 +36,8 @@ rec {
                 documentation.nixos.extraModuleSources = [ ../. ];
                 # Provide a default hostname and deployment target equal
                 # to the attribute name of the machine in the model.
-                networking.hostName = lib.mkDefault machineName;
+                networking.hostName = lib.mkDefault hostName;
+                networking.domain = lib.mkDefault domain;
                 deployment.targetHost = lib.mkDefault machineName;
 
                 # If network.pkgs is set, mkDefault nixpkgs.pkgs
