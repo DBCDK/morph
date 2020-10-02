@@ -36,7 +36,9 @@ rec {
                 deployment.targetHost = lib.mkDefault machineName;
 
                 # If network.pkgs is set, mkDefault nixpkgs.pkgs
-                nixpkgs.pkgs = lib.mkIf (nwPkgs != {}) (lib.mkDefault nwPkgs);
+                nixpkgs.pkgs = lib.mkIf (nwPkgs != {}) (lib.mkDefault nwPkgs {
+                    config = config.nixpkgs.config;
+                });
               })
             ];
           extraArgs = { inherit nodes ; name = machineName; };
