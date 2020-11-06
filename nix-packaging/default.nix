@@ -35,7 +35,7 @@ buildGoPackage rec {
 
   postInstall = ''
     mkdir -p $lib
-    cp -v $src/data/*.nix $lib
+    cp -v go/src/$goPackagePath/data/*.nix $lib
   '';
 
   outputs = [ "out" "lib" ];
