@@ -108,32 +108,4 @@ rec {
         '') nodes')}
       '');
 
-  # Function needed to calculate the nixops arguments. This should work even when arguments
-  # are not set yet, so we fake arguments to be able to evaluate the require attribute of
-  # the nixops network expressions.
-
-  dummyArgs = f: builtins.listToAttrs (map (a: lib.nameValuePair a false) (builtins.attrNames (builtins.functionArgs f)));
-
-  getNixOpsExprs = l: lib.unique (lib.flatten (map getRequires l));
-
-  getRequires = f:
-    let
-      nixopsExpr = import f;
-      requires =
-        if builtins.isFunction nixopsExpr then
-          ((nixopsExpr (dummyArgs nixopsExpr)).require or [])
-        else
-          (nixopsExpr.require or []);
-    in
-      [ f ] ++ map getRequires requires;
-
-  fileToArgs = f:
-    let
-      nixopsExpr = import f;
-    in
-      if builtins.isFunction nixopsExpr then
-        map (a: { "${a}" = builtins.toString f; } ) (builtins.attrNames (builtins.functionArgs nixopsExpr))
-      else [];
-
-  getNixOpsArgs = fs: lib.zipAttrs (lib.unique (lib.concatMap fileToArgs (getNixOpsExprs fs)));
 }
