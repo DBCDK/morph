@@ -36,7 +36,7 @@ let
       popd >/dev/null
 
       # replace the sha256 in the default.nix
-      sed -e "s#modSha256.*#modSha256 = \"$sha256\";#" -i ${packagingOut}/default.nix
+      sed -e "s#vendorSha256.*#vendorSha256 = \"$sha256\";#" -i ${packagingOut}/default.nix
 
       unset GOPATH GOCACHE
     fi
