@@ -26,7 +26,7 @@ let
     if [ "$1" == "update" ]; then
       ${go}/bin/go get -u
 
-      source="$( nix eval --raw '(with import ${nixpkgsSrc} {}; import ./nix-packaging/source.nix { inherit lib; })' )"
+      source="$( nix eval --raw '(with import ${nixpkgs} {}; import ./nix-packaging/source.nix { inherit lib; })' )"
 
       # compute the sha256 of the dependencies
       pushd "$source" >/dev/null
