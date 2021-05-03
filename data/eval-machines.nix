@@ -10,40 +10,56 @@ let
 in
   with lib;
 
-rec {
+let
+  modules = machineName: [
+    # Get the configuration of this machine from each network
+    # expression, attaching _file attributes so the NixOS module
+    # system can give sensible error messages.
+    { imports = [ network.${machineName} ]; } { inherit (network) _file; }
+
+    ({ config, lib, options, ... }: {
+      key = "deploy-stuff";
+      imports = [ ./options.nix ];
+      # Make documentation builds deterministic, even with our
+      # tempdir module imports.
+      documentation.nixos.extraModuleSources = [ ../. ];
+      # Provide a default hostname and deployment target equal
+      # to the attribute name of the machine in the model.
+      networking.hostName = lib.mkDefault machineName;
+      deployment.targetHost = lib.mkDefault machineName;
+
+      # If network.pkgs is set, mkDefault nixpkgs.pkgs
+      nixpkgs.pkgs = lib.mkIf (nwPkgs != {}) (lib.mkDefault nwPkgs);
+    })
+  ];
+
+  machineNames = attrNames (removeAttrs network [ "network" "defaults" "resources" "require" "_file" ]);
+
+in rec {
+  # Unchecked configuration of all machines.
+  # Using unchecked config evaluation allows each machine to access other machines
+  # configuration without recursing as full evaluation is prevented
+  uncheckedNodes =
+    listToAttrs (map (machineName:
+      { name = machineName;
+        value = import evalConfig {
+          modules = modules machineName;
+          extraArgs = { nodes = uncheckedNodes; name = machineName; };
+          check = false;
+        };
+      }
+    ) machineNames);
+
   # Compute the definitions of the machines.
   nodes =
     listToAttrs (map (machineName:
-      let
-        # Get the configuration of this machine from each network
-        # expression, attaching _file attributes so the NixOS module
-        # system can give sensible error messages.
-        modules = [ { imports = [ network.${machineName} ]; } { inherit (network) _file; } ];
-      in
       { name = machineName;
         value = import evalConfig {
-          modules =
-            modules ++
-            [ ({ config, lib, options, ... }: {
-                key = "deploy-stuff";
-                imports = [ ./options.nix ];
-                # Make documentation builds deterministic, even with our
-                # tempdir module imports.
-                documentation.nixos.extraModuleSources = [ ../. ];
-                # Provide a default hostname and deployment target equal
-                # to the attribute name of the machine in the model.
-                networking.hostName = lib.mkDefault machineName;
-                deployment.targetHost = lib.mkDefault machineName;
-
-                # If network.pkgs is set, mkDefault nixpkgs.pkgs
-                nixpkgs.pkgs = lib.mkIf (nwPkgs != {}) (lib.mkDefault nwPkgs);
-              })
-            ];
-          extraArgs = { inherit nodes ; name = machineName; };
+          modules = modules machineName;
+          extraArgs = { nodes = uncheckedNodes ; name = machineName; };
         };
       }
-    ) (attrNames (removeAttrs network [ "network" "defaults" "resources" "require" "_file" ])));
-
+    ) machineNames);
 
   deploymentInfoModule = {
     deployment = {
