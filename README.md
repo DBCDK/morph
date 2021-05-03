@@ -202,32 +202,13 @@ machine2 = { ... }: {
 
 All commands mentioned below is available in the nix-shell, if you run `nix-shell` with working dir = project root. The included `shell.nix` uses the latest `nixos-unstable` from GitHub by default, but you can override this by passing in another, eg. `nix-shell --arg nixpkgs '<nixpkgs>'` for your `$NIX_PATH` nixpkgs.
 
-
 ### Go dependency management
 
-Run `make-deps` in order to:
-
-1. (re-)install pinned dependencies in vendor-dir.
-2. (re-)generate nix-packaging/deps.nix.
-
-The former is done to support local dev, since IDE's often auto-import dependencies residing in /vendor.
-The latter is used by the Nix go-builder.
-
-Gopkg.toml specifies at which branch/tag each dependency is requested to be at.
-Gopkg.lock specifies a concrete revision each dependency is pinned at.
-
-If you want to bump dependencies to newest commit, run `make-deps update`, this will change Gopkg.lock and nix-packaging/deps.nix, both of which have to be git-committed.
-
-If you make larger changes to the code base, you can delete both Gopkg.toml and Gopkg.lock and run `dep init` followed by `dep ensure` to create a fresh set of dependency tracking files. **don't forget to test** afterwards.
+From within `nix-shell`, `go get -u` updates all go modules. Remember to update the `vendorSha256` in `./default.nix`
 
 ### Building the project with pinned dependencies
 
-$ `nix-shell`
-
-$ `make-build`
-
-After successful build, `make-build` automatically invokes `make-env` to install the morph bin on the PATH of your nix-shell instance. Subsequently, it sources the morph bash-completion script to allow for completion of morph cli args and flags.
-
+$ `nix-build --arg nixpkgs "builtins.fetchTarball https://github.com/NixOS/nixpkgs/archive/<rev>.tar.gz"`
 
 ## About the project
 

@@ -1,14 +1,15 @@
-{ stdenv, fetchgit, buildGoModule, go-bindata, lib
+{ nixpkgs ? import ./nixpkgs.nix
+, pkgs ? import nixpkgs {}
 , version ? "dev"
 }:
 
-buildGoModule rec {
+pkgs.buildGoModule rec {
   name = "morph-unstable-${version}";
   inherit version;
 
-  nativeBuildInputs = [ go-bindata ];
+  nativeBuildInputs = with pkgs; [ go-bindata ];
 
-  src = import ./source.nix { inherit lib; };
+  src = pkgs.nix-gitignore.gitignoreSource [] ./.;
 
   buildFlagsArray = ''
     -ldflags=
@@ -16,7 +17,7 @@ buildGoModule rec {
     main.version=${version}
   '';
 
-  vendorSha256 = "05rfvbqicr1ww4fjf6r1l8fb4f0rsv10vxndqny8wvng2j1rmmm6";
+  vendorSha256 = "0wv590gsbcfnikdz6sv4hzs5a91ldx2bmgr98yidvmiv1r4505pg";
 
   postPatch = ''
     go-bindata -pkg assets -o assets/assets.go data/
