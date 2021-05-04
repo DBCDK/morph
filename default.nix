@@ -17,7 +17,7 @@ pkgs.buildGoModule rec {
     main.version=${version}
   '';
 
-  vendorSha256 = "0wv590gsbcfnikdz6sv4hzs5a91ldx2bmgr98yidvmiv1r4505pg";
+  vendorSha256 = "08zzp0h4c4i5hk4whz06a3da7qjms6lr36596vxz0d8q0n7rspr9";
 
   postPatch = ''
     go-bindata -pkg assets -o assets/assets.go data/
