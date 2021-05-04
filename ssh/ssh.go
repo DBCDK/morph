@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/dbcdk/morph/utils"
+	"github.com/DBCDK/morph/utils"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
