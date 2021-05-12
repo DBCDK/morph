@@ -1,0 +1,19 @@
+name: CI
+on:
+  pull_request:
+  push:
+jobs:
+  nix-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2.3.4
+    - uses: cachix/install-nix-action@v13
+      with:
+        install_url: https://github.com/numtide/nix-flakes-installer/releases/download/nix-2.4pre20210429_d15a196/install
+
+    - run: echo "experimental-features = nix-command flakes" | sudo tee -a /etc/nix/nix.conf
+    - name: Run Nix Flake Check
+      run: nix flake check
+
+    - name: Run Nix Flake Build
+      run: nix build
