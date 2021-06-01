@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/DBCDK/morph/healthchecks"
-	"github.com/DBCDK/morph/secrets"
-	"github.com/DBCDK/morph/ssh"
-	"github.com/DBCDK/morph/utils"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -17,6 +13,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/DBCDK/morph/healthchecks"
+	"github.com/DBCDK/morph/secrets"
+	"github.com/DBCDK/morph/ssh"
+	"github.com/DBCDK/morph/utils"
 )
 
 type Host struct {
@@ -253,11 +254,15 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		// create tmp dir for result link
 		resultLinkPath = filepath.Join(tmpdir, "result")
 	}
-	args := []string{ctx.EvalMachines,
-		"-A", "machines",
+	args := []string{
+		"build",
+		"-f", ctx.EvalMachines,
+		"-v",
 		"--arg", "networkExpr", deploymentPath,
 		"--argstr", "argsFile", argsFile,
-		"--out-link", resultLinkPath}
+		"--out-link", resultLinkPath,
+		"machines",
+	}
 
 	args = append(args, mkOptions(hosts[0])...)
 
@@ -285,10 +290,10 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	var cmd *exec.Cmd
 	if ctx.AllowBuildShell && buildShell != nil {
-		shellArgs := strings.Join(append([]string{"nix-build"}, args...), " ")
+		shellArgs := strings.Join(append([]string{"nix"}, args...), " ")
 		cmd = exec.Command("nix-shell", *buildShell, "--run", shellArgs)
 	} else {
-		cmd = exec.Command("nix-build", args...)
+		cmd = exec.Command("nix", args...)
 	}
 
 	// show process output on attached stdout/stderr
@@ -361,10 +366,10 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 		keyArg = "?ssh-key=" + ctx.IdentityFile
 	}
 	if ctx.SkipHostKeyCheck {
-  		sshOpts = append(sshOpts, fmt.Sprintf("%s", "-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
+		sshOpts = append(sshOpts, fmt.Sprintf("%s", "-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
 	}
 	if ctx.ConfigFile != "" {
-  		sshOpts = append(sshOpts, fmt.Sprintf("-F %s", ctx.ConfigFile))
+		sshOpts = append(sshOpts, fmt.Sprintf("-F %s", ctx.ConfigFile))
 	}
 	if len(sshOpts) > 0 {
 		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s", strings.Join(sshOpts, " ")))
