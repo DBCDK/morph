@@ -251,7 +251,7 @@ func main() {
 	case healthCheck.FullCommand():
 		err = execHealthCheck(hosts)
 	case uploadSecrets.FullCommand():
-		err = execUploadSecrets(createSSHContext(), hosts)
+		err = execUploadSecrets(createSSHContext(), hosts, nil)
 	case listSecrets.FullCommand():
 		if asJson {
 			err = execListSecretsAsJson(hosts)
@@ -355,7 +355,8 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		fmt.Fprintln(os.Stderr)
 
 		if doUploadSecrets {
-			err = execUploadSecrets(sshContext, singleHostInList)
+			phase := "pre-activation"
+			err = execUploadSecrets(sshContext, singleHostInList, &phase)
 			if err != nil {
 				return "", err
 			}
@@ -368,6 +369,16 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			if err != nil {
 				return "", err
 			}
+		}
+
+		if doUploadSecrets {
+			phase := "post-activation"
+			err = execUploadSecrets(sshContext, singleHostInList, &phase)
+			if err != nil {
+				return "", err
+			}
+
+			fmt.Fprintln(os.Stderr)
 		}
 
 		if deployReboot {
@@ -422,7 +433,7 @@ func execHealthCheck(hosts []nix.Host) error {
 	return err
 }
 
-func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host) error {
+func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host, phase *string) error {
 	for _, host := range hosts {
 		if host.BuildOnly {
 			fmt.Fprintf(os.Stderr, "Secret upload is disabled for build-only host: %s\n", host.Name)
@@ -430,7 +441,7 @@ func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host) error {
 		}
 		singleHostInList := []nix.Host{host}
 
-		err := secretsUpload(sshContext, singleHostInList)
+		err := secretsUpload(sshContext, singleHostInList, phase)
 		if err != nil {
 			return err
 		}
@@ -603,7 +614,7 @@ func pushPaths(sshContext *ssh.SSHContext, filteredHosts []nix.Host, resultPath 
 	return nil
 }
 
-func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host) error {
+func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host, phase *string) error {
 	// upload secrets
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir(deployment)
@@ -611,6 +622,12 @@ func secretsUpload(ctx ssh.Context, filteredHosts []nix.Host) error {
 		fmt.Fprintf(os.Stderr, "Uploading secrets to %s (%s):\n", host.Name, host.TargetHost)
 		postUploadActions := make(map[string][]string, 0)
 		for secretName, secret := range host.Secrets {
+			// if phase is nil, upload the secrets no matter what phase it wants
+			// if phase is non-nil, upload the secrets that match the specified phase
+			if phase != nil && secret.UploadAt != *phase {
+				continue
+			}
+
 			secretSize, err := secrets.GetSecretSize(secret, deploymentDir)
 			if err != nil {
 				return err

@@ -62,6 +62,17 @@ keyOptionsType = submodule ({ ... }: {
         prior to moving the secret in place.
       '';
     };
+
+    uploadAt = mkOption {
+      default = "pre-activation";
+      type = enum [ "pre-activation" "post-activation" ];
+      description = ''
+        When to upload the secret.
+
+        `pre-activation` (the default) will upload the secret and run any associated action prior to activating the system configuration.
+        `post-activation` will upload the secret and run any associated action after activating the system configuration.
+      '';
+    };
   };
 });
 
