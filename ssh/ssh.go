@@ -24,6 +24,7 @@ type Context interface {
 	SetPermissions(host Host, path string, permissions string) error
 	MoveFile(host Host, source string, destination string) error
 	MakeDirs(host Host, path string, parents bool, mode os.FileMode) error
+	WaitForMountPoints(host Host, path string) error
 
 	Cmd(host Host, parts ...string) (*exec.Cmd, error)
 	SudoCmd(host Host, parts ...string) (*exec.Cmd, error)
@@ -382,6 +383,23 @@ func (ctx *SSHContext) SetPermissions(host Host, path string, permissions string
 	if err != nil {
 		errorMessage := fmt.Sprintf(
 			"\tCouldn't chmod file: %s:\n\t%s", path, string(data),
+		)
+		return errors.New(errorMessage)
+	}
+
+	return nil
+}
+
+func (ctx *SSHContext) WaitForMountPoints(host Host, path string) (err error) {
+	cmd, err := ctx.SudoCmd(host, "/run/current-system/sw/bin/systemd-run", "--collect", "--wait", "--property=RequiresMountsFor="+path, "true")
+	if err != nil {
+		return err
+	}
+
+	data, err := cmd.CombinedOutput()
+	if err != nil {
+		errorMessage := fmt.Sprintf(
+			"\tFailed waiting for mountpoints for: %s:\n\t%s", path, string(data),
 		)
 		return errors.New(errorMessage)
 	}
