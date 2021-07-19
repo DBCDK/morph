@@ -371,6 +371,14 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			}
 		}
 
+		if deployReboot {
+			err = host.Reboot(sshContext)
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "Reboot failed")
+				return "", err
+			}
+		}
+
 		if doUploadSecrets {
 			phase := "post-activation"
 			err = execUploadSecrets(sshContext, singleHostInList, &phase)
@@ -379,14 +387,6 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			}
 
 			fmt.Fprintln(os.Stderr)
-		}
-
-		if deployReboot {
-			err = host.Reboot(sshContext)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "Reboot failed")
-				return "", err
-			}
 		}
 
 		if !skipHealthChecks {
