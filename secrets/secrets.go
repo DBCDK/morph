@@ -47,6 +47,11 @@ func GetSecretSize(secret Secret, deploymentWD string) (size int64, err error) {
 func UploadSecret(ctx ssh.Context, host ssh.Host, secret Secret, deploymentWD string) *SecretError {
 	var partialErr *SecretError
 
+	err := ctx.WaitForMountPoints(host, secret.Destination)
+	if err != nil {
+		return wrap(err)
+	}
+
 	tempPath, err := ctx.MakeTempFile(host)
 	if err != nil {
 		return wrap(err)
