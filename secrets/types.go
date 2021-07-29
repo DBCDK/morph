@@ -10,6 +10,7 @@ type Secret struct {
 	Permissions string
 	Action      []string
 	MkDirs      bool
+	UploadAt    string
 }
 
 type Owner struct {
@@ -20,8 +21,8 @@ type Owner struct {
 func (s *Secret) String() string {
 	var string_repr strings.Builder
 
-	fmt.Fprintf(&string_repr, "`%s` -> `%s`, with:\n\tPermissions: %s:%s, %s\n\tCreate remote directories: %t",
-		s.Source, s.Destination, s.Owner.User, s.Owner.Group, s.Permissions, s.MkDirs)
+	fmt.Fprintf(&string_repr, "`%s` -> `%s`, with:\n\tPermissions: %s:%s, %s\n\tCreate remote directories: %t\n\tUpload at: %s",
+		s.Source, s.Destination, s.Owner.User, s.Owner.Group, s.Permissions, s.MkDirs, s.UploadAt)
 
 	if len(s.Action) > 0 {
 		fmt.Fprintf(&string_repr, "\n\tAction: `%s`", strings.Join(s.Action, " "))
