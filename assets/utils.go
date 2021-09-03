@@ -1,3 +1,6 @@
+//go:build !installed_data
+// +build !installed_data
+
 package assets
 
 import (
