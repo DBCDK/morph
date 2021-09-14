@@ -11,11 +11,9 @@ pkgs.buildGoModule rec {
 
   src = pkgs.nix-gitignore.gitignoreSource [] ./.;
 
-  buildFlagsArray = ''
-    -ldflags=
-    -X
-    main.version=${version}
-  '';
+  ldflags = [
+    "-X main.version=${version}"
+  ];
 
   vendorSha256 = "08zzp0h4c4i5hk4whz06a3da7qjms6lr36596vxz0d8q0n7rspr9";
 
