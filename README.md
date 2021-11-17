@@ -197,6 +197,33 @@ machine2 = { ... }: {
 };
 ```
 
+**mutually recursive configurations**
+Each host's configuration has access to a `nodes` argument, which contains the compiled configurations of all hosts.
+
+```
+machine1 = { nodes, ... }: {
+    hostnames.machine2 = 
+        (builtins.head nodes.machine2.networking.interfaces.foo.ipv4.addresses).address;
+    networking.interfaces.foo.ipv4.addresses = [
+        {
+            address = "10.0.0.10";
+            prefixLength = 32;
+        }
+    ];
+}
+
+machine2 = { nodes, ... }: {
+    hostnames.machine1 = 
+        (builtins.head nodes.machine1.networking.interfaces.foo.ipv4.addresses).address;
+    networking.interfaces.foo.ipv4.addresses = [
+        {
+            address = "10.0.0.20";
+            prefixLength = 32;
+        }
+    ];
+}
+```
+
 
 ## Hacking morph
 
