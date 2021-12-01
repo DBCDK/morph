@@ -140,16 +140,16 @@ func (host *Host) Reboot(sshContext *ssh.SSHContext) error {
 
 func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string, err error) {
 
-	args := []string{"eval",
-		"-f", ctx.EvalMachines, "info.buildShell",
+	args := []string{"--eval", ctx.EvalMachines,
+		"--attr", "info.buildShell",
 		"--arg", "networkExpr", deploymentPath,
-		"--json"}
+		"--json", "--strict", "--read-write-mode"}
 
 	if ctx.ShowTrace {
 		args = append(args, "--show-trace")
 	}
 
-	cmd := exec.Command("nix", args...)
+	cmd := exec.Command("nix-instantiate", args...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -163,7 +163,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix eval ..`: %s", err.Error(),
+			"Error while running `nix-instantiate ..`: %s", err.Error(),
 		)
 		return buildShell, errors.New(errorMessage)
 	}
@@ -178,16 +178,16 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 
 func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {
 
-	args := []string{"eval",
-		"-f", ctx.EvalMachines, "info.deployment",
+	args := []string{"--eval", ctx.EvalMachines,
+		"--attr", "info.deployment",
 		"--arg", "networkExpr", deploymentPath,
-		"--json"}
+		"--json", "--strict"}
 
 	if ctx.ShowTrace {
 		args = append(args, "--show-trace")
 	}
 
-	cmd := exec.Command("nix", args...)
+	cmd := exec.Command("nix-instantiate", args...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -201,7 +201,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix eval ..`: %s", err.Error(),
+			"Error while running `nix-instantiate ..`: %s", err.Error(),
 		)
 		return deployment, errors.New(errorMessage)
 	}
@@ -255,13 +255,11 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		resultLinkPath = filepath.Join(tmpdir, "result")
 	}
 	args := []string{
-		"build",
-		"-f", ctx.EvalMachines,
-		"-v",
+		ctx.EvalMachines,
 		"--arg", "networkExpr", deploymentPath,
 		"--argstr", "argsFile", argsFile,
 		"--out-link", resultLinkPath,
-		"machines",
+		"--attr", "machines",
 	}
 
 	args = append(args, mkOptions(hosts[0])...)
@@ -290,10 +288,10 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	var cmd *exec.Cmd
 	if ctx.AllowBuildShell && buildShell != nil {
-		shellArgs := strings.Join(append([]string{"nix"}, args...), " ")
-		cmd = exec.Command("nix-shell", *buildShell, "--run", shellArgs)
+		shellArgs := strings.Join(append([]string{"nix-build"}, args...), " ")
+		cmd = exec.Command("nix-shell", *buildShell, "--pure", "--run", shellArgs)
 	} else {
-		cmd = exec.Command("nix", args...)
+		cmd = exec.Command("nix-build", args...)
 	}
 
 	// show process output on attached stdout/stderr
@@ -378,17 +376,16 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	options := mkOptions(host)
 	for _, path := range paths {
 		args := []string{
-			"copy",
+			"--to", userArg + host.TargetHost + keyArg,
 			path,
-			"--to", "ssh://" + userArg + host.TargetHost + keyArg,
 		}
 		args = append(args, options...)
 		if host.SubstituteOnDestination {
-			args = append(args, "--substitute-on-destination")
+			args = append(args, "--use-substitutes")
 		}
 
 		cmd := exec.Command(
-			"nix", args...,
+			"nix-copy-closure", args...,
 		)
 		cmd.Env = env
 
