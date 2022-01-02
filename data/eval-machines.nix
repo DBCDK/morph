@@ -11,11 +11,11 @@ in
   with lib;
 
 let
-  modules = machineName: [
+  modules = { machineName, nodes, check }: [
     # Get the configuration of this machine from each network
     # expression, attaching _file attributes so the NixOS module
     # system can give sensible error messages.
-    { imports = [ network.${machineName} ]; } { inherit (network) _file; }
+    { imports = [ network.${machineName} ]; }
 
     ({ config, lib, options, ... }: {
       key = "deploy-stuff";
@@ -30,8 +30,18 @@ let
 
       # If network.pkgs is set, mkDefault nixpkgs.pkgs
       nixpkgs.pkgs = lib.mkIf (nwPkgs != {}) (lib.mkDefault nwPkgs);
+
+      # Avoid the deprecated evalConfig arguments by
+      # setting them here instead.
+      _module = {
+        args = {
+          name = machineName;
+          inherit nodes;
+        };
+        inherit check;
+      };
     })
-  ];
+  ] ++ optional (network ? _file) { inherit (network) _file; };
 
   machineNames = attrNames (removeAttrs network [ "network" "defaults" "resources" "require" "_file" ]);
 
@@ -43,9 +53,11 @@ in rec {
     listToAttrs (map (machineName:
       { name = machineName;
         value = import evalConfig {
-          modules = modules machineName;
-          extraArgs = { nodes = uncheckedNodes; name = machineName; };
-          check = false;
+          modules = modules {
+            inherit machineName;
+            check = false;
+            nodes = uncheckedNodes;
+          };
         };
       }
     ) machineNames);
@@ -55,8 +67,11 @@ in rec {
     listToAttrs (map (machineName:
       { name = machineName;
         value = import evalConfig {
-          modules = modules machineName;
-          extraArgs = { nodes = uncheckedNodes ; name = machineName; };
+          modules = modules {
+            inherit machineName;
+            check = true;
+            nodes = uncheckedNodes;
+          };
         };
       }
     ) machineNames);
