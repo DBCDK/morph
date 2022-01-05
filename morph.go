@@ -37,6 +37,7 @@ var (
 	nixBuildTarget      string
 	nixBuildTargetFile  string
 	build               = buildCmd(app.Command("build", "Evaluate and build deployment configuration to the local Nix store"))
+	eval                = evalCmd(app.Command("eval", "Inspect value of an attribute without building"))
 	push                = pushCmd(app.Command("push", "Build and transfer items from the local Nix store to target machines"))
 	deploy              = deployCmd(app.Command("deploy", "Build, push and activate new configuration on machines according to switch-action"))
 	deploySwitchAction  string
@@ -48,6 +49,7 @@ var (
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
 	listSecrets         = listSecretsCmd(app.Command("list-secrets", "List secrets"))
 	asJson              bool
+	attrkey             string
 	execute             = executeCmd(app.Command("exec", "Execute arbitrary commands on machines"))
 	executeCommand      []string
 	keepGCRoot          = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
@@ -61,6 +63,12 @@ func deploymentArg(cmd *kingpin.CmdClause) {
 		HintFiles("nix").
 		Required().
 		ExistingFileVar(&deployment)
+}
+
+func attributeArg(cmd *kingpin.CmdClause) {
+	cmd.Arg("attribute", "Name of attribute to inspect").
+		Required().
+		StringVar(&attrkey)
 }
 
 func timeoutFlag(cmd *kingpin.CmdClause) {
@@ -131,6 +139,12 @@ func asJsonFlag(cmd *kingpin.CmdClause) {
 		Flag("json", "Whether to format the output as JSON instead of plaintext").
 		Default("False").
 		BoolVar(&asJson)
+}
+
+func evalCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	deploymentArg(cmd)
+	attributeArg(cmd)
+	return cmd
 }
 
 func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -234,13 +248,22 @@ func main() {
 	if len(nixBuildArg) > 0 {
 		fmt.Fprintln(os.Stderr, "Deprecation: The --build-arg flag will be removed in a future release.")
 	}
-
+	
 	defer utils.RunFinalizers()
-	setup()
-
+	setup()	
+	
+	// evaluate without building hosts
+	switch clause {
+		case eval.FullCommand():
+			_, err := execEval()
+			handleError(err)
+			return
+	}
+	
+	// setup hosts
 	hosts, err := getHosts(deployment)
 	handleError(err)
-
+	
 	switch clause {
 	case build.FullCommand():
 		_, err = execBuild(hosts)
@@ -294,8 +317,21 @@ func execBuild(hosts []nix.Host) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	fmt.Println(resultPath)
 	return resultPath, nil
+}
+
+func execEval() (string, error) {
+	ctx := getNixContext()
+
+	deploymentFile, err := os.Open(deployment)
+	deploymentPath, err := filepath.Abs(deploymentFile.Name())
+	if err != nil {
+		return "", err
+	}
+	ctx.EvalHosts(deploymentPath, attrkey)
+
+	return deployment, nil
 }
 
 func execPush(hosts []nix.Host) (string, error) {
