@@ -176,7 +176,8 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	return buildShell, nil
 }
 
-func (ctx *NixContext) EvalHosts(deploymentPath string, attribute string) {
+func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, error) {
+	attribute := "nodes." + attr
 	args := []string{ctx.EvalMachines,
 		"--arg", "networkExpr", deploymentPath,
 		"--eval", "--strict", "-A", attribute}
@@ -190,8 +191,8 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attribute string) {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Run()
-	// TODO: add error handling + finalizer(?)
+	err := cmd.Run()
+	return deploymentPath, err
 }
 
 func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {

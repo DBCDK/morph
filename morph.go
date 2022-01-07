@@ -248,22 +248,22 @@ func main() {
 	if len(nixBuildArg) > 0 {
 		fmt.Fprintln(os.Stderr, "Deprecation: The --build-arg flag will be removed in a future release.")
 	}
-	
+
 	defer utils.RunFinalizers()
-	setup()	
-	
+	setup()
+
 	// evaluate without building hosts
 	switch clause {
-		case eval.FullCommand():
-			_, err := execEval()
-			handleError(err)
-			return
+	case eval.FullCommand():
+		_, err := execEval()
+		handleError(err)
+		return
 	}
-	
+
 	// setup hosts
 	hosts, err := getHosts(deployment)
 	handleError(err)
-	
+
 	switch clause {
 	case build.FullCommand():
 		_, err = execBuild(hosts)
@@ -329,9 +329,10 @@ func execEval() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	ctx.EvalHosts(deploymentPath, attrkey)
 
-	return deployment, nil
+	path, err := ctx.EvalHosts(deploymentPath, attrkey)
+
+	return path, err
 }
 
 func execPush(hosts []nix.Host) (string, error) {
