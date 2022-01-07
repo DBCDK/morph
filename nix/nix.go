@@ -176,6 +176,25 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	return buildShell, nil
 }
 
+func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, error) {
+	attribute := "nodes." + attr
+	args := []string{ctx.EvalMachines,
+		"--arg", "networkExpr", deploymentPath,
+		"--eval", "--strict", "-A", attribute}
+
+	cmd := exec.Command("nix-instantiate", args...)
+	utils.AddFinalizer(func() {
+		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
+			_ = cmd.Process.Signal(syscall.SIGTERM)
+		}
+	})
+
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err := cmd.Run()
+	return deploymentPath, err
+}
+
 func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {
 
 	args := []string{"--eval", ctx.EvalMachines,
