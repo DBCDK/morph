@@ -25,6 +25,7 @@ type Host struct {
 	Name                    string
 	NixosRelease            string
 	TargetHost              string
+	TargetPort              int
 	TargetUser              string
 	Secrets                 map[string]secrets.Secret
 	BuildOnly               bool
@@ -64,6 +65,10 @@ func (host *Host) GetName() string {
 
 func (host *Host) GetTargetHost() string {
 	return host.TargetHost
+}
+
+func (host *Host) GetTargetPort() int {
+	return host.TargetPort
 }
 
 func (host *Host) GetTargetUser() string {
@@ -384,6 +389,9 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	}
 	if ctx.SkipHostKeyCheck {
 		sshOpts = append(sshOpts, fmt.Sprintf("%s", "-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
+	}
+	if host.TargetPort != 0 {
+		sshOpts = append(sshOpts, fmt.Sprintf("-p %d", host.TargetPort))
 	}
 	if ctx.ConfigFile != "" {
 		sshOpts = append(sshOpts, fmt.Sprintf("-F %s", ctx.ConfigFile))

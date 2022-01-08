@@ -15,6 +15,7 @@ import (
 type Host interface {
 	GetName() string
 	GetTargetHost() string
+	GetTargetPort() int
 	GetTargetUser() string
 	GetHealthChecks() HealthChecks
 }
