@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/DBCDK/kingpin"
 	"github.com/DBCDK/morph/assets"
 	"github.com/DBCDK/morph/filter"
@@ -12,9 +16,6 @@ import (
 	"github.com/DBCDK/morph/secrets"
 	"github.com/DBCDK/morph/ssh"
 	"github.com/DBCDK/morph/utils"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // This is set at build time via -ldflags magic
@@ -291,7 +292,7 @@ func main() {
 func handleError(err error) {
 	//Stupid handling of catch-all errors for now
 	if err != nil {
-		fmt.Fprint(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err)
 		utils.Exit(1)
 	}
 }
