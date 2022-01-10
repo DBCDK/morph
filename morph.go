@@ -317,7 +317,6 @@ func execBuild(hosts []nix.Host) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(resultPath)
 	return resultPath, nil
 }
 
