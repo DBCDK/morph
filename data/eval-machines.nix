@@ -101,10 +101,22 @@ in rec {
   };
 
   # Phase 2: build complete machine configurations.
-  machines = { argsFile, buildTargets ? null }:
+  machines = {
+    argsFile ? null,
+    names ? null
+    buildTargets ? null
+  }:
+    assert argsFile != null -> names == null;
     let
-      fileArgs = builtins.fromJSON (builtins.readFile argsFile);
-      nodes' = filterAttrs (n: v: elem n fileArgs.Names) nodes; in
+      names' = if argsFile != null then
+          (builtins.fromJSON (builtins.readFile argsFile)).Names
+        else
+          names;
+      nodes' = if names != null then
+          filterAttrs (n: v: elem n fileArgs.Names) nodes
+        else
+          nodes;
+    in
     runCommand "morph"
       { preferLocalBuild = true; }
       (if buildTargets == null
