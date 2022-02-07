@@ -2,7 +2,8 @@
 { networkExpr, pkgs ? {} }:
 
 let
-  network      = import networkExpr;
+  isImportable = v: builtins.isString v || builtins.isPath v || v ? outPath || v ? __toString;
+  network      = if isImportable networkExpr then import networkExpr else networkExpr;
   nwPkgs       = network.network.pkgs or pkgs;
   lib          = network.network.lib or nwPkgs.lib or (import <nixpkgs/lib>);
   evalConfig   = network.network.evalConfig or ((nwPkgs.path or <nixpkgs>) + "/nixos/lib/eval-config.nix");
