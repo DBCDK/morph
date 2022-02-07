@@ -12,9 +12,8 @@ pkgs.buildGoModule rec {
   ldflags = [
     "-X main.version=${version}"
   ];
-  buildFlags = "-tags installed_data";
   preBuild = ''
-    buildFlagsArray+=("-ldflags=-X github.com/DBCDK/morph/assets.root=$lib")
+    ldflags+=" -X main.assetRoot=$lib"
   '';
 
   vendorSha256 = "08zzp0h4c4i5hk4whz06a3da7qjms6lr36596vxz0d8q0n7rspr9";
