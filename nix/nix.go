@@ -54,8 +54,8 @@ type NixContext struct {
 	AllowBuildShell bool
 }
 
-type FileArgs struct {
-	Names []string
+type JSONArgs struct {
+	Names []string `json:"names"`
 }
 
 func (host *Host) GetName() string {
@@ -228,17 +228,9 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		hostsArg = append(hostsArg, host.Name)
 	}
 
-	fileArgs := FileArgs{
+	jsonArgs, err := json.Marshal(JSONArgs{
 		Names: hostsArg,
-	}
-
-	jsonArgs, err := json.Marshal(fileArgs)
-	if err != nil {
-		return "", err
-	}
-	argsFile := tmpdir + "/morph-args.json"
-
-	err = ioutil.WriteFile(argsFile, jsonArgs, 0644)
+	})
 	if err != nil {
 		return "", err
 	}
@@ -259,7 +251,7 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		"-f", ctx.EvalMachines,
 		"-v",
 		"--arg", "networkExpr", deploymentPath,
-		"--argstr", "argsFile", argsFile,
+		"--argstr", "argsJSON", string(jsonArgs),
 		"--out-link", resultLinkPath,
 		"machines",
 	}

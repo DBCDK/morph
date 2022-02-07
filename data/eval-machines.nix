@@ -102,14 +102,14 @@ in rec {
 
   # Phase 2: build complete machine configurations.
   machines = {
-    argsFile ? null,
-    names ? null
-    buildTargets ? null
+    names ? null,
+    buildTargets ? null,
+    argsJSON ? null,
   }:
-    assert argsFile != null -> names == null;
+    assert argsJSON != null -> names == null;
     let
       names' = if argsFile != null then
-          (builtins.fromJSON (builtins.readFile argsFile)).Names
+          (builtins.fromJSON argsJSON).names
         else
           names;
       nodes' = if names != null then
