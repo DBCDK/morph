@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/DBCDK/kingpin"
-	"github.com/DBCDK/morph/assets"
 	"github.com/DBCDK/morph/filter"
 	"github.com/DBCDK/morph/healthchecks"
 	"github.com/DBCDK/morph/nix"
@@ -18,8 +17,10 @@ import (
 	"github.com/DBCDK/morph/utils"
 )
 
-// This is set at build time via -ldflags magic
+// These are set at build time via -ldflags magic
 var version string
+var assetRoot string
+
 var switchActions = []string{"dry-activate", "test", "switch", "boot"}
 
 var (
@@ -55,8 +56,6 @@ var (
 	executeCommand      []string
 	keepGCRoot          = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
 	allowBuildShell     = app.Flag("allow-build-shell", "Allow using `network.buildShell` to build in a nix-shell which can execute arbitrary commands on the local system").Default("False").Bool()
-
-	assetRoot string
 )
 
 func deploymentArg(cmd *kingpin.CmdClause) {
@@ -231,14 +230,11 @@ func listSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 func setup() {
 	utils.ValidateEnvironment("nix")
 
-	utils.AddFinalizer(func() {
-		assets.Teardown(assetRoot)
-	})
 	utils.SignalHandler()
 
-	var assetErr error
-	assetRoot, assetErr = assets.Setup()
-	handleError(assetErr)
+	if assetRoot == "" {
+		handleError(errors.New("Morph must be compiled with \"-ldflags=-X main.assetRoot=<path-to-installed-data/>\"."))
+	}
 }
 
 func main() {
@@ -588,7 +584,7 @@ func getHosts(deploymentPath string) (hosts []nix.Host, err error) {
 
 func getNixContext() *nix.NixContext {
 	return &nix.NixContext{
-		EvalMachines:    filepath.Join(assetRoot, assets.Friendly, "eval-machines.nix"),
+		EvalMachines:    filepath.Join(assetRoot, "eval-machines.nix"),
 		ShowTrace:       showTrace,
 		KeepGCRoot:      *keepGCRoot,
 		AllowBuildShell: *allowBuildShell,
