@@ -7,7 +7,7 @@ in
     description = "webserver with secrets";
   };
 
-  "web01.example.com" = { config, pkgs, ... }: {
+  "web01" = { config, pkgs, ... }: {
     deployment = {
       secrets = {
         "nix-cache-signing-key" = {

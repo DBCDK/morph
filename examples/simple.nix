@@ -10,7 +10,7 @@ in
     };
   };
 
-  "web01.example.com" = { config, pkgs, ... }: {
+  "web01" = { config, pkgs, ... }: {
     deployment.tags = [ "web" ];
 
     boot.loader.systemd-boot.enable = true;
@@ -24,7 +24,7 @@ in
     };
   };
 
-  "db01.example.com" = { config, pkgs, ... }: {
+  "db01" = { config, pkgs, ... }: {
     deployment.tags = [ "db" ];
 
     boot.loader.systemd-boot.enable = true;

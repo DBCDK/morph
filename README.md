@@ -70,8 +70,8 @@ Example deployments can be found in the `examples` directory, and built as follo
 ```
 $ morph build examples/simple.nix
 Selected 2/2 hosts (name filter:-0, limits:-0):
-	  0: db01.example.com (secrets: 0, health checks: 0)
-	  1: web01.example.com (secrets: 0, health checks: 0)
+	  0: db01 (secrets: 0, health checks: 0)
+	  1: web01 (secrets: 0, health checks: 0)
 
 <probably lots of nix-build output>
 

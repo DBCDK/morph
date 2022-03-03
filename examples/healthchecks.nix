@@ -7,7 +7,7 @@ in
     description = "health check demo hosts";
   };
 
-  "web01.example.com" = { config, pkgs, ... }: {
+  "web01" = { config, pkgs, ... }: {
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
 
