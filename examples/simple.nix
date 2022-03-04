@@ -1,9 +1,5 @@
 let
-  # Pin the deployment package-set to a specific version of nixpkgs
-  pkgs = import (builtins.fetchTarball {
-    url = "https://github.com/NixOS/nixpkgs-channels/archive/51d115ac89d676345b05a0694b23bd2691bf708a.tar.gz";
-    sha256 = "1gfjaa25nq4vprs13h30wasjxh79i67jj28v54lkj4ilqjhgh2rs";
-  }) {};
+  pkgs = import (import ../nixpkgs.nix) {};
 in
 {
   network =  {
@@ -14,7 +10,7 @@ in
     };
   };
 
-  "web01.example.com" = { config, pkgs, ... }: {
+  "web01" = { config, pkgs, ... }: {
     deployment.tags = [ "web" ];
 
     boot.loader.systemd-boot.enable = true;
@@ -28,7 +24,7 @@ in
     };
   };
 
-  "db01.example.com" = { config, pkgs, ... }: {
+  "db01" = { config, pkgs, ... }: {
     deployment.tags = [ "db" ];
 
     boot.loader.systemd-boot.enable = true;
