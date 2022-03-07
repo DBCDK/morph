@@ -34,6 +34,7 @@ type Context interface {
 type Host interface {
 	GetName() string
 	GetTargetHost() string
+	GetTargetPort() int
 	GetTargetUser() string
 }
 
@@ -94,6 +95,17 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 		args = append(args, "-F", ctx.ConfigFile)
 	}
 	var hostAndDestination = host.GetTargetHost()
+	if host.GetTargetPort() != 0 {
+		var optionName string
+		if transfer != nil {
+			optionName = "-P"
+		} else {
+			optionName = "-p"
+		}
+
+		args = append(args, optionName, fmt.Sprintf("%d", host.GetTargetPort()))
+	}
+
 	if transfer != nil {
 		args = append(args, transfer.Source)
 		hostAndDestination += ":" + transfer.Destination

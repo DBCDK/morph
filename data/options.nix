@@ -176,6 +176,14 @@ in
       '';
     };
 
+    targetPort = mkOption {
+      type = nullOr int;
+      default = null;
+      description = ''
+        The port number of remote host used for deployment.
+      '';
+    };
+
     targetUser = mkOption {
       type = str;
       default = "";
