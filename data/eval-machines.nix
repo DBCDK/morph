@@ -6,7 +6,12 @@ let
   nw = network.network;
   nwPkgs = nw.pkgs or { };
   nwLib = nw.lib or nwPkgs.lib or (import <nixpkgs/lib>);
-  nwEvalConfig = nw.evalConfig or ((nwPkgs.path or <nixpkgs>) + "/nixos/lib/eval-config.nix");
+  nwEvalConfig =
+    let
+      nwEvalConfig' = nw.evalConfig or ((nwPkgs.path or <nixpkgs>) + "/nixos/lib/eval-config.nix");
+    in
+    if nwLib.isFunction nwEvalConfig' then nwEvalConfig' else import nwEvalConfig';
+  nwSpecialArgs = nw.specialArgs or { };
   nwRunCommand = nw.runCommand or nwPkgs.runCommand or ((import <nixpkgs> { }).runCommand);
 in
 
@@ -81,6 +86,7 @@ rec {
         check = false;
         nodes = uncheckedNodes;
       };
+      specialArgs = nwSpecialArgs;
     }
   ) networkMachines;
 
@@ -95,6 +101,7 @@ rec {
         check = true;
         nodes = uncheckedNodes;
       };
+      specialArgs = nwSpecialArgs;
     }
   ) networkMachines;
 
