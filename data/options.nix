@@ -1,9 +1,9 @@
 { config, lib, pkgs, ... }:
 
-with lib;
-with lib.types;
-
 let
+
+inherit (lib) mkOption types;
+inherit (types) attrsOf bool enum int path listOf nullOr str submodule;
 
 ownerOptionsType = submodule ({ ... }: {
     options = {
@@ -91,7 +91,7 @@ healthCheckType = submodule ({ ... }: {
   };
 });
 
-httpHealthCheckType = types.submodule ({ ... }: {
+httpHealthCheckType = submodule ({ ... }: {
   options = {
     description = mkOption {
         type = str;
@@ -140,7 +140,7 @@ httpHealthCheckType = types.submodule ({ ... }: {
   };
 });
 
-cmdHealthCheckType = types.submodule ({ ... }: {
+cmdHealthCheckType = submodule ({ ... }: {
   options = {
     description = mkOption {
         type = str;
@@ -255,7 +255,7 @@ in
   # all derived dependencies.
   config.system.extraDependencies =
   let
-    cmds = concatMap (h: h.cmd) config.deployment.healthChecks.cmd;
+    cmds = builtins.concatMap (h: h.cmd) config.deployment.healthChecks.cmd;
   in
-  [ (pkgs.writeText "healthcheck-commands.txt" (concatStringsSep "\n" cmds)) ];
+  [ (pkgs.writeText "healthcheck-commands.txt" (builtins.concatStringsSep "\n" cmds)) ];
 }

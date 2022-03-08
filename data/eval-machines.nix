@@ -2,20 +2,20 @@
 { networkExpr }:
 
 let
-  network      = import networkExpr;
-  nwPkgs       = network.network.pkgs or {};
-  lib          = network.network.lib or nwPkgs.lib or (import <nixpkgs/lib>);
-  evalConfig   = network.network.evalConfig or ((nwPkgs.path or <nixpkgs>) + "/nixos/lib/eval-config.nix");
-  runCommand   = network.network.runCommand or nwPkgs.runCommand or ((import <nixpkgs> {}).runCommand);
+  network        = import networkExpr;
+  nw             = network.network;
+  nwPkgs         = nw.pkgs or {};
+  nwLib          = nw.lib or nwPkgs.lib or (import <nixpkgs/lib>);
+  nwEvalConfig   = nw.evalConfig or ((nwPkgs.path or <nixpkgs>) + "/nixos/lib/eval-config.nix");
+  nwRunCommand   = nw.runCommand or nwPkgs.runCommand or ((import <nixpkgs> {}).runCommand);
 in
-  with lib;
 
 let
-  modules = { machineName, nodes, check }: [
+  modules = { machineName, machineModule ? network.${machineName}, nodes, check }: [
     # Get the configuration of this machine from each network
     # expression, attaching _file attributes so the NixOS module
     # system can give sensible error messages.
-    { imports = [ network.${machineName} ]; }
+    { imports = [ machineModule ]; }
 
     ({ config, lib, options, ... }: {
       key = "deploy-stuff";
@@ -41,46 +41,38 @@ let
         inherit check;
       };
     })
-  ] ++ optional (network ? _file) { inherit (network) _file; };
+  ] ++ nwLib.optional (network ? _file) { inherit (network) _file; };
 
-  machineNames = attrNames (removeAttrs network [ "network" "defaults" "resources" "require" "_file" ]);
+  networkMachines = removeAttrs network [ "network" "defaults" "resources" "require" "_file" ];
 
 in rec {
   # Unchecked configuration of all machines.
   # Using unchecked config evaluation allows each machine to access other machines
   # configuration without recursing as full evaluation is prevented
   uncheckedNodes =
-    listToAttrs (map (machineName:
-      { name = machineName;
-        value = import evalConfig {
-          modules = modules {
-            inherit machineName;
-            check = false;
-            nodes = uncheckedNodes;
-          };
-        };
-      }
-    ) machineNames);
+    builtins.mapAttrs (machineName: machineModule: nwEvalConfig {
+      modules = modules {
+        inherit machineName machineModule;
+        check = false;
+        nodes = uncheckedNodes;
+      };
+    }) networkMachines;
 
   # Compute the definitions of the machines.
   nodes =
-    listToAttrs (map (machineName:
-      { name = machineName;
-        value = import evalConfig {
-          modules = modules {
-            inherit machineName;
-            check = true;
-            nodes = uncheckedNodes;
-          };
-        };
-      }
-    ) machineNames);
+    builtins.mapAttrs (machineName: machineModule: nwEvalConfig {
+      modules = modules {
+        inherit machineName;
+        check = true;
+        nodes = uncheckedNodes;
+      };
+    }) networkMachines;
 
   deploymentInfoModule = {
     deployment = {
-      name = deploymentName;
-      arguments = args;
-      inherit uuid;
+      name = nwLib.deploymentName;
+      arguments = nwLib.args;
+      inherit (nwLib) uuid;
     };
   };
 
@@ -92,17 +84,17 @@ in rec {
     in rec {
 
     machines =
-      flip mapAttrs nodes (n: v': let v = scrubOptionValue v'; in
+      builtins.mapAttrs (n: v': let v = nwLib.scrubOptionValue v'; in
         { inherit (v.config.deployment) targetHost targetPort targetUser secrets healthChecks buildOnly substituteOnDestination tags;
           name = n;
-          nixosRelease = v.config.system.nixos.release or (removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
-          nixConfig = mapAttrs
+          nixosRelease = v.config.system.nixos.release or (nwLib.removeSuffix v.config.system.nixos.version.suffix v.config.system.nixos.version);
+          nixConfig = builtins.mapAttrs
             (n: v: if builtins.isString v then v else throw "nix option '${n}' must have a string typed value")
             (network'.network.nixConfig or {});
         }
-      );
+      ) nodes;
 
-    machineList = (map (key: getAttr key machines) (attrNames machines));
+    machineList = (map (key: builtins.getAttr key machines) (builtins.attrNames machines));
     network = network'.network or {};
     deployment = {
       hosts = machineList;
@@ -119,21 +111,21 @@ in rec {
   machines = { argsFile, buildTargets ? null }:
     let
       fileArgs = builtins.fromJSON (builtins.readFile argsFile);
-      nodes' = filterAttrs (n: v: elem n fileArgs.Names) nodes; in
-    runCommand "morph"
+      nodes' = nwLib.filterAttrs (n: v: builtins.elem n fileArgs.Names) nodes; in
+    nwRunCommand "morph"
       { preferLocalBuild = true; }
       (if buildTargets == null
       then ''
         mkdir -p $out
-        ${toString (mapAttrsToList (nodeName: nodeDef: ''
+        ${toString (nwLib.mapAttrsToList (nodeName: nodeDef: ''
           ln -s ${nodeDef.config.system.build.toplevel} $out/${nodeName}
         '') nodes')}
       ''
       else ''
         mkdir -p $out
-        ${toString (mapAttrsToList (nodeName: nodeDef: ''
+        ${toString (nwLib.mapAttrsToList (nodeName: nodeDef: ''
           mkdir -p $out/${nodeName}
-          ${toString (mapAttrsToList (buildName: buildFn: ''
+          ${toString (nwLib.mapAttrsToList (buildName: buildFn: ''
             ln -s ${buildFn nodeDef} $out/${nodeName}/${buildName}
           '') buildTargets)}
         '') nodes')}
