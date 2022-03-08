@@ -1,25 +1,43 @@
-{ config, lib, pkgs, ... }:
-
-with lib;
-with lib.types;
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
 
-  ownerOptionsType = submodule (_: {
-    options = {
-      group = mkOption {
-        type = str;
-        description = "Group that will own the secret.";
-        default = "root";
-      };
+  inherit (lib) mkOption types;
+  inherit (types)
+    attrsOf
+    bool
+    enum
+    int
+    path
+    listOf
+    nullOr
+    str
+    submodule
+    ;
 
-      user = mkOption {
-        type = str;
-        description = "User who will own the secret.";
-        default = "root";
+  ownerOptionsType = submodule (
+    { ... }:
+    {
+      options = {
+        group = mkOption {
+          type = str;
+          description = "Group that will own the secret.";
+          default = "root";
+        };
+
+        user = mkOption {
+          type = str;
+          description = "User who will own the secret.";
+          default = "root";
+        };
       };
-    };
-  });
+    }
+  );
 
   keyOptionsType = submodule (_: {
     options = {
@@ -50,8 +68,7 @@ let
       action = mkOption {
         default = [ ];
         type = listOf str;
-        description =
-          "Action to perform on remote host after uploading secret.";
+        description = "Action to perform on remote host after uploading secret.";
       };
 
       mkDirs = mkOption {
@@ -66,7 +83,10 @@ let
 
       uploadAt = mkOption {
         default = "pre-activation";
-        type = enum [ "pre-activation" "post-activation" ];
+        type = enum [
+          "pre-activation"
+          "post-activation"
+        ];
         description = ''
           When to upload the secret.
 
@@ -92,78 +112,128 @@ let
     };
   });
 
-  httpHealthCheckType = types.submodule (_: {
-    options = {
-      description = mkOption {
-        type = str;
-        description = "Health check description";
-      };
-      host = mkOption {
-        type = nullOr str;
-        description = "Host name";
-        default = null;
-        #default = config.networking.hostName;
-      };
-      scheme = mkOption {
-        type = str;
-        description = "Scheme";
-        default = "http";
-      };
-      port = mkOption {
-        type = int;
-        description = "Port number";
-      };
-      path = mkOption {
-        type = path;
-        description = "HTTP request path";
-        default = "/";
-      };
-      headers = mkOption {
-        type = attrsOf str;
-        description = "HTTP request headers";
-        default = { };
-      };
-      period = mkOption {
-        type = int;
-        description = "Seconds between checks";
-        default = 2;
-      };
-      timeout = mkOption {
-        type = int;
-        description = "Timeout in seconds";
-        default = 5;
-      };
-      insecureSSL = mkOption {
-        type = bool;
-        description = "Ignore SSL errors";
-        default = false;
-      };
-    };
-  });
+  owner = mkOption {
+    default = { };
+    type = ownerOptionsType;
+    description = ''
+      Owner of the secret.
+    '';
+  };
 
-  cmdHealthCheckType = types.submodule (_: {
-    options = {
-      description = mkOption {
-        type = str;
-        description = "Health check description";
+  permissions = mkOption {
+    default = "0400";
+    type = str;
+    description = "Permissions expressed as octal.";
+  };
+
+  action = mkOption {
+    default = [ ];
+    type = listOf str;
+    description = "Action to perform on remote host after uploading secret.";
+  };
+
+  mkDirs = mkOption {
+    default = true;
+    type = bool;
+    description = ''
+      Whether to create parent directories to secret destination.
+      In particular, morph will execute `sudo mkdir -p -m 755 /path/to/secret/destination`
+      prior to moving the secret in place.
+    '';
+  };
+
+  uploadAt = mkOption {
+    default = "pre-activation";
+    type = enum [
+      "pre-activation"
+      "post-activation"
+    ];
+    description = ''
+      When to upload the secret.
+
+      `pre-activation` (the default) will upload the secret and run any associated action prior to activating the system configuration.
+      `post-activation` will upload the secret and run any associated action after activating the system configuration.
+    '';
+  };
+
+  httpHealthCheckType = submodule (
+    { ... }:
+    {
+      options = {
+        description = mkOption {
+          type = str;
+          description = "Health check description";
+        };
+        host = mkOption {
+          type = nullOr str;
+          description = "Host name";
+          default = null;
+          #default = config.networking.hostName;
+        };
+        scheme = mkOption {
+          type = str;
+          description = "Scheme";
+          default = "http";
+        };
+        port = mkOption {
+          type = int;
+          description = "Port number";
+        };
+        path = mkOption {
+          type = path;
+          description = "HTTP request path";
+          default = "/";
+        };
+        headers = mkOption {
+          type = attrsOf str;
+          description = "HTTP request headers";
+          default = { };
+        };
+        period = mkOption {
+          type = int;
+          description = "Seconds between checks";
+          default = 2;
+        };
+        timeout = mkOption {
+          type = int;
+          description = "Timeout in seconds";
+          default = 5;
+        };
+        insecureSSL = mkOption {
+          type = bool;
+          description = "Ignore SSL errors";
+          default = false;
+        };
       };
-      cmd = mkOption {
-        type = nullOr (listOf str);
-        description = "Command to run as list";
-        default = null;
+    }
+  );
+
+  cmdHealthCheckType = submodule (
+    { ... }:
+    {
+      options = {
+        description = mkOption {
+          type = str;
+          description = "Health check description";
+        };
+        cmd = mkOption {
+          type = nullOr (listOf str);
+          description = "Command to run as list";
+          default = null;
+        };
+        period = mkOption {
+          type = int;
+          description = "Seconds between checks";
+          default = 2;
+        };
+        timeout = mkOption {
+          type = int;
+          description = "Timeout in seconds";
+          default = 5;
+        };
       };
-      period = mkOption {
-        type = int;
-        description = "Seconds between checks";
-        default = 2;
-      };
-      timeout = mkOption {
-        type = int;
-        description = "Timeout in seconds";
-        default = 5;
-      };
-    };
-  });
+    }
+  );
 
 in
 {
@@ -268,7 +338,9 @@ in
   # all derived dependencies.
   config.system.extraDependencies =
     let
-      cmds = concatMap (h: h.cmd) (config.deployment.preDeployChecks.cmd ++ config.deployment.healthChecks.cmd);
+      cmds = builtins.concatMap (h: h.cmd) (
+        config.deployment.preDeployChecks.cmd ++ config.deployment.healthChecks.cmd
+      );
     in
-    [ (pkgs.writeText "healthcheck-commands.txt" (concatStringsSep "\n" cmds)) ];
+    [ (pkgs.writeText "healthcheck-commands.txt" (builtins.concatStringsSep "\n" cmds)) ];
 }
