@@ -1,5 +1,11 @@
 name: "Build"
-on: [ "pull_request" ]
+on:
+  push:
+    branches:
+      - "*"
+  pull_request:
+    branches:
+      - "master"
 jobs:
   tests:
     runs-on: ubuntu-latest
