@@ -583,8 +583,29 @@ func getHosts(deploymentPath string) (hosts []nix.Host, err error) {
 }
 
 func getNixContext() *nix.NixContext {
+	evalCmd := os.Getenv("MORPH_NIX_EVAL_CMD")
+	buildCmd := os.Getenv("MORPH_NIX_BUILD_CMD")
+	shellCmd := os.Getenv("MORPH_NIX_SHELL_CMD")
+	evalMachines := os.Getenv("MORPH_NIX_EVAL_MACHINES")
+
+	if evalCmd == "" {
+		evalCmd = "nix-instantiate"
+	}
+	if buildCmd == "" {
+		buildCmd = "nix-build"
+	}
+	if shellCmd == "" {
+		shellCmd = "nix-shell"
+	}
+	if evalMachines == "" {
+		evalMachines = filepath.Join(assetRoot, "eval-machines.nix")
+	}
+
 	return &nix.NixContext{
-		EvalMachines:    filepath.Join(assetRoot, "eval-machines.nix"),
+		EvalCmd: evalCmd,
+		BuildCmd: buildCmd,
+		ShellCmd: shellCmd,
+		EvalMachines:    evalMachines,
 		ShowTrace:       showTrace,
 		KeepGCRoot:      *keepGCRoot,
 		AllowBuildShell: *allowBuildShell,

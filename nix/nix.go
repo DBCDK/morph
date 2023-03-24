@@ -49,6 +49,9 @@ type Deployment struct {
 }
 
 type NixContext struct {
+	EvalCmd	string
+	BuildCmd string
+	ShellCmd string
 	EvalMachines    string
 	ShowTrace       bool
 	KeepGCRoot      bool
@@ -154,7 +157,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 		args = append(args, "--show-trace")
 	}
 
-	cmd := exec.Command("nix-instantiate", args...)
+	cmd := exec.Command(ctx.EvalCmd, args...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -168,7 +171,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix-instantiate ..`: %s", err.Error(),
+			"Error while running `%s ..`: %s", ctx.EvalCmd, err.Error(),
 		)
 		return buildShell, errors.New(errorMessage)
 	}
@@ -187,7 +190,7 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, er
 		"--arg", "networkExpr", deploymentPath,
 		"--eval", "--strict", "-A", attribute}
 
-	cmd := exec.Command("nix-instantiate", args...)
+	cmd := exec.Command(ctx.EvalCmd, args...)
 	utils.AddFinalizer(func() {
 		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
 			_ = cmd.Process.Signal(syscall.SIGTERM)
@@ -211,7 +214,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 		args = append(args, "--show-trace")
 	}
 
-	cmd := exec.Command("nix-instantiate", args...)
+	cmd := exec.Command(ctx.EvalCmd, args...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -225,7 +228,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix-instantiate ..`: %s", err.Error(),
+			"Error while running `%s ..`: %s", ctx.EvalCmd, err.Error(),
 		)
 		return deployment, errors.New(errorMessage)
 	}
@@ -312,10 +315,10 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	var cmd *exec.Cmd
 	if ctx.AllowBuildShell && buildShell != nil {
-		shellArgs := strings.Join(append([]string{"nix-build"}, args...), " ")
-		cmd = exec.Command("nix-shell", *buildShell, "--pure", "--run", shellArgs)
+		shellArgs := strings.Join(append([]string{ctx.BuildCmd}, args...), " ")
+		cmd = exec.Command(ctx.ShellCmd, *buildShell, "--pure", "--run", shellArgs)
 	} else {
-		cmd = exec.Command("nix-build", args...)
+		cmd = exec.Command(ctx.BuildCmd, args...)
 	}
 
 	// show process output on attached stdout/stderr
