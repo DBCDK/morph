@@ -133,6 +133,10 @@ Morph supports the following (optional) environment variables:
 - `SSH_USER` specifies the user that should be used to connect to the remote system
 - `SSH_SKIP_HOST_KEY_CHECK` if set disables host key verification
 - `SSH_CONFIG_FILE` allows to change the location of the ~/.ssh/config file
+- `MORPH_NIX_EVAL_CMD` morph will invoke this command instead of default: "nix-instantiate" on PATH 
+- `MORPH_NIX_BUILD_CMD` morph will invoke this command instead of default: "nix-build" on PATH 
+- `MORPH_NIX_SHELL_CMD` morph will invoke this command instead of default: "nix-shell" on PATH
+- `MORPH_NIX_EVAL_MACHINES` path to a custom eval-machines.nix. Defaults to the eval-machines.nix bundled with morph
 
 ### Secrets
 

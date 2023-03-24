@@ -49,6 +49,9 @@ type Deployment struct {
 }
 
 type NixContext struct {
+	EvalCmd	string
+	BuildCmd string
+	ShellCmd string
 	EvalMachines    string
 	ShowTrace       bool
 	KeepGCRoot      bool
@@ -230,8 +233,8 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 		return buildShell, err
 	}
 
-	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
+	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -247,7 +250,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix-instantiate ..`: %s", err.Error(),
+			"Error while running `%s ..`: %s", ctx.EvalCmd, err.Error(),
 		)
 		return buildShell, errors.New(errorMessage)
 	}
@@ -263,6 +266,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, error) {
 	attribute := "nodes." + attr
 
+
 	nixEvalInvocationArgs := NixEvalInvocationArgs{
 		AsJSON: false,
 		Attr: attribute,
@@ -277,6 +281,7 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, er
 	}
 
 	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+
 	utils.AddFinalizer(func() {
 		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
 			_ = cmd.Process.Signal(syscall.SIGTERM)
@@ -306,6 +311,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 		return deployment, err
 	}
 
+
 	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
@@ -322,7 +328,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `nix-instantiate ..`: %s", err.Error(),
+			"Error while running `%s ..`: %s", ctx.EvalCmd, err.Error(),
 		)
 		return deployment, errors.New(errorMessage)
 	}
@@ -396,10 +402,12 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	var cmd *exec.Cmd
 	if ctx.AllowBuildShell && buildShell != nil {
+
 		shellArgs := strings.Join(append([]string{"nix-build"}, NixBuildInvocationArgs.ToNixBuildArgs()...), " ")
 		cmd = exec.Command("nix-shell", *buildShell, "--pure", "--run", shellArgs)
 	} else {
 		cmd = exec.Command("nix-build", NixBuildInvocationArgs.ToNixBuildArgs()...)
+
 	}
 
 	// show process output on attached stdout/stderr
