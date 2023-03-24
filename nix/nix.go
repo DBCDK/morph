@@ -58,8 +58,80 @@ type NixContext struct {
 	AllowBuildShell bool
 }
 
-type FileArgs struct {
+type NixBuildInvocationArgs struct {
+	ArgsFile string
+	Attr string
+	DeploymentPath string
 	Names []string
+	NixArgs []string
+	NixBuildTargets string
+	NixConfig map[string]string
+	NixContext NixContext
+	ResultLinkPath string
+}
+
+func (nArgs *NixBuildInvocationArgs) ToNixBuildArgs() []string {
+	args := []string{
+		nArgs.NixContext.EvalMachines,
+		"--arg", "networkExpr", nArgs.DeploymentPath,
+		"--argstr", "argsFile", nArgs.ArgsFile,
+		"--out-link", nArgs.ResultLinkPath,
+		"--attr", nArgs.Attr,
+	}
+
+	args = append(args, mkOptions(nArgs.NixConfig)...)
+
+	if len(nArgs.NixArgs) > 0 {
+		args = append(args, nArgs.NixArgs...)
+	}
+
+	if nArgs.NixContext.ShowTrace {
+		args = append(args, "--show-trace")
+	}
+
+	if nArgs.NixBuildTargets != "" {
+		args = append(args,
+			"--arg", "buildTargets", nArgs.NixBuildTargets)
+	}
+
+	return args
+}
+
+func (nArgs *NixEvalInvocationArgs) ToNixInstantiateArgs() []string {
+	args := []string{
+		"--eval", nArgs.NixContext.EvalMachines,
+		"--arg", "networkExpr", nArgs.DeploymentPath,
+		"--argstr", "argsFile", nArgs.ArgsFile,
+		"--attr", nArgs.Attr,
+	}
+
+	if nArgs.NixContext.ShowTrace {
+		args = append(args, "--show-trace")
+	}
+
+	if nArgs.AsJSON {
+		args = append(args, "--json")
+	}
+
+	if nArgs.Strict {
+		args = append(args, "--strict")
+	}
+
+	if nArgs.ReadWriteMode {
+		args = append(args, "--read-write-mode")
+	}
+
+	return args
+}
+
+type NixEvalInvocationArgs struct {
+	AsJSON bool
+	ArgsFile string
+	Attr string
+	DeploymentPath string
+	NixContext NixContext
+	Strict bool
+	ReadWriteMode bool
 }
 
 func (host *Host) GetName() string {
@@ -148,16 +220,21 @@ func (host *Host) Reboot(sshContext *ssh.SSHContext) error {
 
 func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string, err error) {
 
-	args := []string{"--eval", ctx.EvalMachines,
-		"--attr", "info.buildShell",
-		"--arg", "networkExpr", deploymentPath,
-		"--json", "--strict", "--read-write-mode"}
-
-	if ctx.ShowTrace {
-		args = append(args, "--show-trace")
+	nixEvalInvocationArgs := NixEvalInvocationArgs{
+		AsJSON: true,
+		Attr: "info.buildShell",
+		DeploymentPath: deploymentPath,
+		NixContext: *ctx,
+		Strict: true,
 	}
 
-	cmd := exec.Command(ctx.EvalCmd, args...)
+	jsonArgs, err := json.Marshal(nixEvalInvocationArgs)
+	if err != nil {
+		return buildShell, err
+	}
+
+
+	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -168,6 +245,8 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 			_ = cmd.Process.Signal(syscall.SIGTERM)
 		}
 	})
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("MORPH_ARGS=%s", jsonArgs))
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
@@ -186,11 +265,23 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 
 func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, error) {
 	attribute := "nodes." + attr
-	args := []string{ctx.EvalMachines,
-		"--arg", "networkExpr", deploymentPath,
-		"--eval", "--strict", "-A", attribute}
 
-	cmd := exec.Command(ctx.EvalCmd, args...)
+
+	nixEvalInvocationArgs := NixEvalInvocationArgs{
+		AsJSON: false,
+		Attr: attribute,
+		DeploymentPath: deploymentPath,
+		NixContext: *ctx,
+		Strict: true,
+	}
+
+	jsonArgs, err := json.Marshal(nixEvalInvocationArgs)
+	if err != nil {
+		return "", err
+	}
+
+	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+
 	utils.AddFinalizer(func() {
 		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
 			_ = cmd.Process.Signal(syscall.SIGTERM)
@@ -199,22 +290,29 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, er
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("MORPH_ARGS=%s", jsonArgs))
+	err = cmd.Run()
 	return deploymentPath, err
 }
 
 func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {
 
-	args := []string{"--eval", ctx.EvalMachines,
-		"--attr", "info.deployment",
-		"--arg", "networkExpr", deploymentPath,
-		"--json", "--strict"}
-
-	if ctx.ShowTrace {
-		args = append(args, "--show-trace")
+	nixEvalInvocationArgs := NixEvalInvocationArgs{
+		AsJSON: true,
+		Attr: "info.deployment",
+		DeploymentPath: deploymentPath,
+		NixContext: *ctx,
+		Strict: true,
 	}
 
-	cmd := exec.Command(ctx.EvalCmd, args...)
+	jsonArgs, err := json.Marshal(nixEvalInvocationArgs)
+	if err != nil {
+		return deployment, err
+	}
+
+
+	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -225,6 +323,8 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 			_ = cmd.Process.Signal(syscall.SIGTERM)
 		}
 	})
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("MORPH_ARGS=%s", jsonArgs))
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
@@ -250,24 +350,9 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		os.RemoveAll(tmpdir)
 	})
 
-	hostsArg := []string{}
+	hostNames := []string{}
 	for _, host := range hosts {
-		hostsArg = append(hostsArg, host.Name)
-	}
-
-	fileArgs := FileArgs{
-		Names: hostsArg,
-	}
-
-	jsonArgs, err := json.Marshal(fileArgs)
-	if err != nil {
-		return "", err
-	}
-	argsFile := tmpdir + "/morph-args.json"
-
-	err = ioutil.WriteFile(argsFile, jsonArgs, 0644)
-	if err != nil {
-		return "", err
+		hostNames = append(hostNames, host.Name)
 	}
 
 	resultLinkPath := filepath.Join(path.Dir(deploymentPath), ".gcroots", path.Base(deploymentPath))
@@ -281,28 +366,6 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		// create tmp dir for result link
 		resultLinkPath = filepath.Join(tmpdir, "result")
 	}
-	args := []string{
-		ctx.EvalMachines,
-		"--arg", "networkExpr", deploymentPath,
-		"--argstr", "argsFile", argsFile,
-		"--out-link", resultLinkPath,
-		"--attr", "machines",
-	}
-
-	args = append(args, mkOptions(hosts[0])...)
-
-	if len(nixArgs) > 0 {
-		args = append(args, nixArgs...)
-	}
-
-	if ctx.ShowTrace {
-		args = append(args, "--show-trace")
-	}
-
-	if nixBuildTargets != "" {
-		args = append(args,
-			"--arg", "buildTargets", nixBuildTargets)
-	}
 
 	buildShell, err := ctx.GetBuildShell(deploymentPath)
 
@@ -313,12 +376,38 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		return resultPath, errors.New(errorMessage)
 	}
 
+	argsFile := tmpdir + "/morph-args.json"
+	NixBuildInvocationArgs := NixBuildInvocationArgs{
+		ArgsFile: argsFile,
+		Attr: "machines",
+		DeploymentPath: deploymentPath,
+		Names: hostNames,
+		NixArgs: nixArgs,
+		NixBuildTargets: nixBuildTargets,
+		NixConfig: hosts[0].NixConfig,
+		NixContext: *ctx,
+		ResultLinkPath: resultLinkPath,
+	}
+
+	jsonArgs, err := json.Marshal(NixBuildInvocationArgs)
+	if err != nil {
+		return "", err
+	}
+
+	err = ioutil.WriteFile(argsFile, jsonArgs, 0644)
+	if err != nil {
+		return "", err
+	}
+
+
 	var cmd *exec.Cmd
 	if ctx.AllowBuildShell && buildShell != nil {
-		shellArgs := strings.Join(append([]string{ctx.BuildCmd}, args...), " ")
-		cmd = exec.Command(ctx.ShellCmd, *buildShell, "--pure", "--run", shellArgs)
+
+		shellArgs := strings.Join(append([]string{"nix-build"}, NixBuildInvocationArgs.ToNixBuildArgs()...), " ")
+		cmd = exec.Command("nix-shell", *buildShell, "--pure", "--run", shellArgs)
 	} else {
-		cmd = exec.Command(ctx.BuildCmd, args...)
+		cmd = exec.Command("nix-build", NixBuildInvocationArgs.ToNixBuildArgs()...)
+
 	}
 
 	// show process output on attached stdout/stderr
@@ -329,6 +418,10 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 			_ = cmd.Process.Signal(syscall.SIGTERM)
 		}
 	})
+
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, fmt.Sprintf("MORPH_ARGS=%s", jsonArgs))
+	cmd.Env = append(cmd.Env, fmt.Sprintf("MORPH_ARGS_FILE=%s", argsFile))
 	err = cmd.Run()
 
 	if err != nil {
@@ -346,9 +439,13 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	return
 }
 
-func mkOptions(host Host) []string {
+func mkOptionsFromHost(host Host) []string {
+	return mkOptions(host.NixConfig)
+}
+
+func mkOptions(nixConfig map[string]string) []string {
 	var options = make([]string, 0)
-	for k, v := range host.NixConfig {
+	for k, v := range nixConfig {
 		options = append(options, "--option")
 		options = append(options, k)
 		options = append(options, v)
@@ -403,7 +500,7 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s", strings.Join(sshOpts, " ")))
 	}
 
-	options := mkOptions(host)
+	options := mkOptionsFromHost(host)
 	for _, path := range paths {
 		args := []string{
 			"--to", userArg + host.TargetHost + keyArg,
