@@ -234,7 +234,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	}
 
 
-	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -280,7 +280,7 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, er
 		return "", err
 	}
 
-	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	utils.AddFinalizer(func() {
 		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
@@ -312,7 +312,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 	}
 
 
-	cmd := exec.Command("nix-instantiate", nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -403,10 +403,10 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	var cmd *exec.Cmd
 	if ctx.AllowBuildShell && buildShell != nil {
 
-		shellArgs := strings.Join(append([]string{"nix-build"}, NixBuildInvocationArgs.ToNixBuildArgs()...), " ")
-		cmd = exec.Command("nix-shell", *buildShell, "--pure", "--run", shellArgs)
+		shellArgs := strings.Join(append([]string{ctx.BuildCmd}, NixBuildInvocationArgs.ToNixBuildArgs()...), " ")
+		cmd = exec.Command(ctx.ShellCmd, *buildShell, "--pure", "--run", shellArgs)
 	} else {
-		cmd = exec.Command("nix-build", NixBuildInvocationArgs.ToNixBuildArgs()...)
+		cmd = exec.Command(ctx.BuildCmd, NixBuildInvocationArgs.ToNixBuildArgs()...)
 
 	}
 
