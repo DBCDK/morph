@@ -53,6 +53,8 @@ in rec {
     listToAttrs (map (machineName:
       { name = machineName;
         value = import evalConfig {
+          # Force decide system in module system
+          system = null;
           modules = modules {
             inherit machineName;
             check = false;
@@ -67,6 +69,8 @@ in rec {
     listToAttrs (map (machineName:
       { name = machineName;
         value = import evalConfig {
+          # Force decide system in module system
+          system = null;
           modules = modules {
             inherit machineName;
             check = true;
