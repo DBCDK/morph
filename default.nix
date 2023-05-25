@@ -9,7 +9,7 @@ pkgs.buildGoModule rec {
   ldflags =
     [ "-X main.version=${version}" "-X main.assetRoot=${placeholder "lib"}" ];
 
-  vendorHash = "sha256-zQlMtbXgrH83zrcIoOuFhb2tYCeQ1pz4UQUvRIsLMCE==";
+  vendorHash = "sha256-2zy8ejm8yRbAXEHNKIgelVaLCa+hfvO56AMithsFSRU=";
 
   postInstall = ''
     mkdir -p $lib

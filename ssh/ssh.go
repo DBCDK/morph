@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/DBCDK/morph/utils"
+	"github.com/frioux/shellquote"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
@@ -45,6 +46,7 @@ type SSHContext struct {
 	IdentityFile       string
 	ConfigFile         string
 	SkipHostKeyCheck   bool
+	SshArgs 		   string
 }
 
 type FileTransfer struct {
@@ -67,14 +69,17 @@ func (sshCtx *SSHContext) CmdContext(ctx context.Context, host Host, parts ...st
 		return sshCtx.SudoCmdContext(ctx, host, parts...)
 	}
 
-	cmd, cmdArgs := sshCtx.sshArgs(host, nil)
+	cmd, cmdArgs, err := sshCtx.sshArgs(host, nil)
+	if err != nil {
+		return nil, err
+	}
 	cmdArgs = append(cmdArgs, parts...)
 
 	command := exec.CommandContext(ctx, cmd, cmdArgs...)
 	return command, nil
 }
 
-func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, args []string) {
+func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, args []string, err error) {
 	if transfer != nil {
 		cmd = "scp"
 	} else {
@@ -93,6 +98,14 @@ func (ctx *SSHContext) sshArgs(host Host, transfer *FileTransfer) (cmd string, a
 	}
 	if ctx.ConfigFile != "" {
 		args = append(args, "-F", ctx.ConfigFile)
+	}
+	err = nil
+	if ctx.SshArgs != "" {
+		quotedArgs, err := shellquote.Quote(strings.Fields(ctx.SshArgs))
+		args = append(args, quotedArgs)
+		if err != nil {
+			return "", nil, err
+		}
 	}
 	var hostAndDestination = host.GetTargetHost()
 	if host.GetTargetPort() != 0 {
@@ -138,7 +151,10 @@ func (sshCtx *SSHContext) SudoCmdContext(ctx context.Context, host Host, parts .
 		}
 	}
 
-	cmd, cmdArgs := sshCtx.sshArgs(host, nil)
+	cmd, cmdArgs, err := sshCtx.sshArgs(host, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	// normalize sudo
 	if parts[0] == "sudo" {
@@ -306,10 +322,13 @@ func (ctx *SSHContext) MakeTempFile(host Host) (path string, err error) {
 }
 
 func (ctx *SSHContext) UploadFile(host Host, source string, destination string) (err error) {
-	c, parts := ctx.sshArgs(host, &FileTransfer{
+	c, parts, err := ctx.sshArgs(host, &FileTransfer{
 		Source:      source,
 		Destination: destination,
 	})
+	if err != nil {
+		return err
+	}
 	cmd := exec.Command(c, parts...)
 
 	data, err := cmd.CombinedOutput()

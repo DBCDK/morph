@@ -13,5 +13,6 @@ require (
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
+	github.com/frioux/shellquote v0.0.2 // indirect
 	gopkg.in/mattes/go-expand-tilde.v1 v1.0.0-20150330173918-cb884138e64c // indirect
 )
