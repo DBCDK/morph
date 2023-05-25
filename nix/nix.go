@@ -18,6 +18,7 @@ import (
 	"github.com/DBCDK/morph/secrets"
 	"github.com/DBCDK/morph/ssh"
 	"github.com/DBCDK/morph/utils"
+	"github.com/frioux/shellquote"
 )
 
 type Host struct {
@@ -495,6 +496,13 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	}
 	if ctx.ConfigFile != "" {
 		sshOpts = append(sshOpts, fmt.Sprintf("-F %s", ctx.ConfigFile))
+	}
+	if ctx.SshArgs != "" {
+		quotedArgs, err := shellquote.Quote(strings.Fields(ctx.SshArgs))
+		sshOpts = append(sshOpts, quotedArgs)
+		if err != nil {
+			return err
+		}
 	}
 	if len(sshOpts) > 0 {
 		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s", strings.Join(sshOpts, " ")))
