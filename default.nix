@@ -14,7 +14,7 @@ pkgs.buildGoModule rec {
     "-X main.assetRoot=${placeholder "lib"}"
   ];
 
-  vendorSha256 = "sha256-9HgCd2TUBOypjM0vn2IrcW1E4o+bZqZrl/NOkWUpyo0=";
+  vendorHash = "sha256-zQlMtbXgrH83zrcIoOuFhb2tYCeQ1pz4UQUvRIsLMCE==";
 
   postInstall = ''
     mkdir -p $lib
