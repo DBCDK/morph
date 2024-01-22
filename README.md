@@ -19,7 +19,7 @@ It should work on any modern Linux distribution, but NixOS is the only one we te
 
 Pre-built binaries are not provided, since we install morph through an overlay.
 
-The easiest way to get morph up and running is to fork this repository and run `nix-shell --command make-build`, which should result in a store path containing the morph binary.
+The easiest way to get morph up and running is to fork this repository and run `nix-build`, which should result in a store path containing the morph binary.
 Consider checking out a specific tag, or at least pin the version of morph you're using somehow.
 
 
