@@ -1,16 +1,12 @@
-let
-  pkgs = import (import ../nixpkgs.nix) {};
-in
-{
-  network =  {
+let pkgs = import (import ../nixpkgs.nix) { };
+in {
+  network = {
     inherit pkgs;
     description = "simple hosts";
-    ordering = {
-      tags = [ "db" "web" ];
-    };
+    ordering = { tags = [ "db" "web" ]; };
   };
 
-  "web01" = { config, pkgs, ... }: {
+  "web01" = _: {
     deployment.tags = [ "web" ];
 
     boot.loader.systemd-boot.enable = true;
@@ -19,12 +15,18 @@ in
     services.nginx.enable = true;
 
     fileSystems = {
-        "/" = { label = "nixos"; fsType = "ext4"; };
-        "/boot" = { label = "boot"; fsType = "vfat"; };
+      "/" = {
+        label = "nixos";
+        fsType = "ext4";
+      };
+      "/boot" = {
+        label = "boot";
+        fsType = "vfat";
+      };
     };
   };
 
-  "db01" = { config, pkgs, ... }: {
+  "db01" = _: {
     deployment.tags = [ "db" ];
 
     boot.loader.systemd-boot.enable = true;
@@ -33,8 +35,14 @@ in
     services.postgresql.enable = true;
 
     fileSystems = {
-        "/" = { label = "nixos"; fsType = "ext4"; };
-        "/boot" = { label = "boot"; fsType = "vfat"; };
+      "/" = {
+        label = "nixos";
+        fsType = "ext4";
+      };
+      "/boot" = {
+        label = "boot";
+        fsType = "vfat";
+      };
     };
   };
 }
