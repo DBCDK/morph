@@ -8,4 +8,11 @@
     taplo.enable = true; # toml
     yamlfmt.enable = true; # yaml
   };
+  settings = {
+    formatter = {
+      nixfmt.includes = [ "*.nix" "./data/*" ];
+      statix.includes = [ "*.nix" "./data/*" ];
+      deadnix.includes = [ "*.nix" "./data/*" ];
+    };
+  };
 }

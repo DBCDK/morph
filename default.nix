@@ -1,18 +1,13 @@
-{ nixpkgs ? import ./nixpkgs.nix
-, pkgs ? import nixpkgs {}
-, version ? "dev"
-}:
+{ nixpkgs ? import ./nixpkgs.nix, pkgs ? import nixpkgs { }, version ? "dev" }:
 
 pkgs.buildGoModule rec {
   name = "morph-unstable-${version}";
   inherit version;
 
-  src = pkgs.nix-gitignore.gitignoreSource [] ./.;
+  src = pkgs.nix-gitignore.gitignoreSource [ ] ./.;
 
-  ldflags = [
-    "-X main.version=${version}"
-    "-X main.assetRoot=${placeholder "lib"}"
-  ];
+  ldflags =
+    [ "-X main.version=${version}" "-X main.assetRoot=${placeholder "lib"}" ];
 
   vendorHash = "sha256-zQlMtbXgrH83zrcIoOuFhb2tYCeQ1pz4UQUvRIsLMCE==";
 

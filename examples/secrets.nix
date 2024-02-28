@@ -1,13 +1,11 @@
-let
-  pkgs = import (import ../nixpkgs.nix) {};
-in
-{
-  network =  {
+let pkgs = import (import ../nixpkgs.nix) { };
+in {
+  network = {
     inherit pkgs;
     description = "webserver with secrets";
   };
 
-  "web01" = { config, pkgs, ... }: {
+  "web01" = _: {
     deployment = {
       secrets = {
         "nix-cache-signing-key" = {
@@ -16,7 +14,7 @@ in
           owner.user = "nginx";
           owner.group = "root";
           permissions = "0400"; # this is the default
-          action = ["sudo" "systemctl" "reload" "nginx.service"];
+          action = [ "sudo" "systemctl" "reload" "nginx.service" ];
         };
       };
     };
@@ -27,8 +25,14 @@ in
     services.nginx.enable = true;
 
     fileSystems = {
-        "/" = { label = "nixos"; fsType = "ext4"; };
-        "/boot" = { label = "boot"; fsType = "vfat"; };
+      "/" = {
+        label = "nixos";
+        fsType = "ext4";
+      };
+      "/boot" = {
+        label = "boot";
+        fsType = "vfat";
+      };
     };
   };
 }
