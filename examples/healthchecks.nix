@@ -1,27 +1,31 @@
-let
-  pkgs = import (import ../nixpkgs.nix) {};
-in
-{
-  network =  {
+let pkgs = import (import ../nixpkgs.nix) { };
+in {
+  network = {
     inherit pkgs;
     description = "health check demo hosts";
   };
 
-  "web01" = { config, pkgs, ... }: {
+  "web01" = _: {
     boot.loader.systemd-boot.enable = true;
     boot.loader.efi.canTouchEfiVariables = true;
 
     services.nginx.enable = true;
 
     fileSystems = {
-        "/" = { label = "nixos"; fsType = "ext4"; };
-        "/boot" = { label = "boot"; fsType = "vfat"; };
+      "/" = {
+        label = "nixos";
+        fsType = "ext4";
+      };
+      "/boot" = {
+        label = "boot";
+        fsType = "vfat";
+      };
     };
 
     deployment = {
       healthChecks = {
         cmd = [{
-          cmd = ["true" "one argument" "another argument"];
+          cmd = [ "true" "one argument" "another argument" ];
           description = "Testing that 'true' works.";
         }];
 
@@ -36,7 +40,8 @@ in
           {
             scheme = "https";
             port = 443;
-            host = "some-other-host.example.com"; # defaults to the hostname of the host if unset
+            host =
+              "some-other-host.example.com"; # defaults to the hostname of the host if unset
             path = "/health";
             description = "Check whether $imaginaryService is running.";
           }
