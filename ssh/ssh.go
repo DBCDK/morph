@@ -138,7 +138,20 @@ func (sshCtx *SSHContext) SudoCmdContext(ctx context.Context, host Host, parts .
 			return nil, err
 		}
 	} else if sshCtx.GetSudoPasswordCommand != "" {
-		sshCtx.sudoPassword = sshCtx.GetSudoPasswordCommand
+		command := strings.Fields(sshCtx.GetSudoPasswordCommand)
+		var argsArr = []string{}
+		for i, e := range command {
+			if i != 0 {
+				argsArr = append(argsArr, e)
+			}
+		}
+		passCmd := exec.Command(command[0], argsArr...)
+
+		passOut, err := passCmd.Output()
+		if err != nil {
+			panic(err)
+		}
+		sshCtx.sudoPassword = string(passOut)
 	}
 
 	cmd, cmdArgs := sshCtx.sshArgs(host, nil)
