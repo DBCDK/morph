@@ -39,12 +39,13 @@ type Host interface {
 }
 
 type SSHContext struct {
-	sudoPassword       string
-	AskForSudoPassword bool
-	DefaultUsername    string
-	IdentityFile       string
-	ConfigFile         string
-	SkipHostKeyCheck   bool
+	sudoPassword           string
+	AskForSudoPassword     bool
+	GetSudoPasswordCommand string
+	DefaultUsername        string
+	IdentityFile           string
+	ConfigFile             string
+	SkipHostKeyCheck       bool
 }
 
 type FileTransfer struct {
@@ -136,6 +137,21 @@ func (sshCtx *SSHContext) SudoCmdContext(ctx context.Context, host Host, parts .
 		if err != nil {
 			return nil, err
 		}
+	} else if sshCtx.GetSudoPasswordCommand != "" {
+		command := strings.Fields(sshCtx.GetSudoPasswordCommand)
+		var argsArr = []string{}
+		for i, e := range command {
+			if i != 0 {
+				argsArr = append(argsArr, e)
+			}
+		}
+		passCmd := exec.Command(command[0], argsArr...)
+
+		passOut, err := passCmd.Output()
+		if err != nil {
+			panic(err)
+		}
+		sshCtx.sudoPassword = string(passOut)
 	}
 
 	cmd, cmdArgs := sshCtx.sshArgs(host, nil)

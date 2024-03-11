@@ -35,6 +35,7 @@ var (
 	deployment          string
 	timeout             int
 	askForSudoPasswd    bool
+	passCmd             string
 	nixBuildArg         []string
 	nixBuildTarget      string
 	nixBuildTargetFile  string
@@ -82,6 +83,13 @@ func askForSudoPasswdFlag(cmd *kingpin.CmdClause) {
 		Flag("passwd", "Whether to ask interactively for remote sudo password when needed").
 		Default("False").
 		BoolVar(&askForSudoPasswd)
+}
+
+func getSudoPasswdCommand(cmd *kingpin.CmdClause) {
+	cmd.
+		Flag("passcmd", "Specify command to run for sudo password").
+		Default("").
+		StringVar(&passCmd)
 }
 
 func selectorFlags(cmd *kingpin.CmdClause) {
@@ -168,6 +176,7 @@ func executeCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	showTraceFlag(cmd)
 	askForSudoPasswdFlag(cmd)
+	getSudoPasswdCommand(cmd)
 	timeoutFlag(cmd)
 	deploymentArg(cmd)
 	cmd.
@@ -185,6 +194,7 @@ func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	deploymentArg(cmd)
 	timeoutFlag(cmd)
 	askForSudoPasswdFlag(cmd)
+	getSudoPasswdCommand(cmd)
 	skipHealthChecksFlag(cmd)
 	cmd.
 		Flag("upload-secrets", "Upload secrets as part of the host deployment").
@@ -214,6 +224,7 @@ func uploadSecretsCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	showTraceFlag(cmd)
 	askForSudoPasswdFlag(cmd)
+	getSudoPasswdCommand(cmd)
 	skipHealthChecksFlag(cmd)
 	deploymentArg(cmd)
 	return cmd
@@ -439,11 +450,12 @@ func execDeploy(hosts []nix.Host) (string, error) {
 
 func createSSHContext() *ssh.SSHContext {
 	return &ssh.SSHContext{
-		AskForSudoPassword: askForSudoPasswd,
-		IdentityFile:       os.Getenv("SSH_IDENTITY_FILE"),
-		DefaultUsername:    os.Getenv("SSH_USER"),
-		SkipHostKeyCheck:   os.Getenv("SSH_SKIP_HOST_KEY_CHECK") != "",
-		ConfigFile:         os.Getenv("SSH_CONFIG_FILE"),
+		AskForSudoPassword:     askForSudoPasswd,
+		GetSudoPasswordCommand: passCmd,
+		IdentityFile:           os.Getenv("SSH_IDENTITY_FILE"),
+		DefaultUsername:        os.Getenv("SSH_USER"),
+		SkipHostKeyCheck:       os.Getenv("SSH_SKIP_HOST_KEY_CHECK") != "",
+		ConfigFile:             os.Getenv("SSH_CONFIG_FILE"),
 	}
 }
 
@@ -602,9 +614,9 @@ func getNixContext() *nix.NixContext {
 	}
 
 	return &nix.NixContext{
-		EvalCmd: evalCmd,
-		BuildCmd: buildCmd,
-		ShellCmd: shellCmd,
+		EvalCmd:         evalCmd,
+		BuildCmd:        buildCmd,
+		ShellCmd:        shellCmd,
 		EvalMachines:    evalMachines,
 		ShowTrace:       showTrace,
 		KeepGCRoot:      *keepGCRoot,
