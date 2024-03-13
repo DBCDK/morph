@@ -8,7 +8,7 @@ import (
 // Create a context with a timeout, but only if the timeout is longer than 0
 func ContextWithConditionalTimeout(parent context.Context, timeout int) (context.Context, context.CancelFunc) {
 	var (
-		ctx context.Context
+		ctx    context.Context
 		cancel context.CancelFunc
 	)
 

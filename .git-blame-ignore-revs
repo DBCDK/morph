@@ -26,3 +26,6 @@
 
 # treewide nix fmt after flakification
 4a3684b18388d727f36a72f736f68ef379dbb209
+
+# treewide nix fmt with gofmt enabled
+7a77a23891d599c21a07ebe31a490d00fb835559

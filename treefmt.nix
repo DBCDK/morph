@@ -7,6 +7,7 @@
     shellcheck.enable = true; # bash/shell
     taplo.enable = true; # toml
     yamlfmt.enable = true; # yaml
+    gofmt.enable = true;
   };
   settings = {
     formatter = {

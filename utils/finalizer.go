@@ -16,9 +16,9 @@ type FinalizerFunc func()
 var finalizers []*finalizer
 
 /*
-	Finalizers run sequentially at morph shutdown - both at clean shutdown and on errors.
-	Finalizers should be quick, simple and they need to ignore errors and don't panic.
-	Each finalizer will only run once and will _never_ be re-invoked.
+Finalizers run sequentially at morph shutdown - both at clean shutdown and on errors.
+Finalizers should be quick, simple and they need to ignore errors and don't panic.
+Each finalizer will only run once and will _never_ be re-invoked.
 */
 func (f *finalizer) Run() {
 	if !f.executed {
