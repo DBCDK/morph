@@ -17,7 +17,7 @@ func GetAbsPathRelativeTo(path string, reference string) string {
 	}
 }
 
-func ValidateEnvironment(dependencies ...string)  {
+func ValidateEnvironment(dependencies ...string) {
 	missingDepencies := make([]string, 0)
 	for _, dependency := range dependencies {
 		_, err := exec.LookPath(dependency)
@@ -27,7 +27,7 @@ func ValidateEnvironment(dependencies ...string)  {
 	}
 
 	if len(missingDepencies) > 0 {
-		fmt.Fprint(os.Stderr, errors.New("Missing dependencies: '" + strings.Join(missingDepencies, ", ") + "' on $PATH"))
+		fmt.Fprint(os.Stderr, errors.New("Missing dependencies: '"+strings.Join(missingDepencies, ", ")+"' on $PATH"))
 		Exit(1)
 	}
 }

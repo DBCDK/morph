@@ -56,7 +56,7 @@ func FilterHostsTags(allHosts []nix.Host, selectedTags []string) (hosts []nix.Ho
 		include := true
 		for _, selectTag := range selectedTags {
 			if !hasTag(host, selectTag) {
-				include = false;
+				include = false
 				break
 			}
 

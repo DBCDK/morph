@@ -49,9 +49,9 @@ type Deployment struct {
 }
 
 type NixContext struct {
-	EvalCmd	string
-	BuildCmd string
-	ShellCmd string
+	EvalCmd         string
+	BuildCmd        string
+	ShellCmd        string
 	EvalMachines    string
 	ShowTrace       bool
 	KeepGCRoot      bool
@@ -59,15 +59,15 @@ type NixContext struct {
 }
 
 type NixBuildInvocationArgs struct {
-	ArgsFile string
-	Attr string
-	DeploymentPath string
-	Names []string
-	NixArgs []string
+	ArgsFile        string
+	Attr            string
+	DeploymentPath  string
+	Names           []string
+	NixArgs         []string
 	NixBuildTargets string
-	NixConfig map[string]string
-	NixContext NixContext
-	ResultLinkPath string
+	NixConfig       map[string]string
+	NixContext      NixContext
+	ResultLinkPath  string
 }
 
 func (nArgs *NixBuildInvocationArgs) ToNixBuildArgs() []string {
@@ -125,13 +125,13 @@ func (nArgs *NixEvalInvocationArgs) ToNixInstantiateArgs() []string {
 }
 
 type NixEvalInvocationArgs struct {
-	AsJSON bool
-	ArgsFile string
-	Attr string
+	AsJSON         bool
+	ArgsFile       string
+	Attr           string
 	DeploymentPath string
-	NixContext NixContext
-	Strict bool
-	ReadWriteMode bool
+	NixContext     NixContext
+	Strict         bool
+	ReadWriteMode  bool
 }
 
 func (host *Host) GetName() string {
@@ -221,18 +221,17 @@ func (host *Host) Reboot(sshContext *ssh.SSHContext) error {
 func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string, err error) {
 
 	nixEvalInvocationArgs := NixEvalInvocationArgs{
-		AsJSON: true,
-		Attr: "info.buildShell",
+		AsJSON:         true,
+		Attr:           "info.buildShell",
 		DeploymentPath: deploymentPath,
-		NixContext: *ctx,
-		Strict: true,
+		NixContext:     *ctx,
+		Strict:         true,
 	}
 
 	jsonArgs, err := json.Marshal(nixEvalInvocationArgs)
 	if err != nil {
 		return buildShell, err
 	}
-
 
 	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
@@ -266,13 +265,12 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, error) {
 	attribute := "nodes." + attr
 
-
 	nixEvalInvocationArgs := NixEvalInvocationArgs{
-		AsJSON: false,
-		Attr: attribute,
+		AsJSON:         false,
+		Attr:           attribute,
 		DeploymentPath: deploymentPath,
-		NixContext: *ctx,
-		Strict: true,
+		NixContext:     *ctx,
+		Strict:         true,
 	}
 
 	jsonArgs, err := json.Marshal(nixEvalInvocationArgs)
@@ -299,18 +297,17 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, er
 func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {
 
 	nixEvalInvocationArgs := NixEvalInvocationArgs{
-		AsJSON: true,
-		Attr: "info.deployment",
+		AsJSON:         true,
+		Attr:           "info.deployment",
 		DeploymentPath: deploymentPath,
-		NixContext: *ctx,
-		Strict: true,
+		NixContext:     *ctx,
+		Strict:         true,
 	}
 
 	jsonArgs, err := json.Marshal(nixEvalInvocationArgs)
 	if err != nil {
 		return deployment, err
 	}
-
 
 	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
@@ -378,15 +375,15 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 
 	argsFile := tmpdir + "/morph-args.json"
 	NixBuildInvocationArgs := NixBuildInvocationArgs{
-		ArgsFile: argsFile,
-		Attr: "machines",
-		DeploymentPath: deploymentPath,
-		Names: hostNames,
-		NixArgs: nixArgs,
+		ArgsFile:        argsFile,
+		Attr:            "machines",
+		DeploymentPath:  deploymentPath,
+		Names:           hostNames,
+		NixArgs:         nixArgs,
 		NixBuildTargets: nixBuildTargets,
-		NixConfig: hosts[0].NixConfig,
-		NixContext: *ctx,
-		ResultLinkPath: resultLinkPath,
+		NixConfig:       hosts[0].NixConfig,
+		NixContext:      *ctx,
+		ResultLinkPath:  resultLinkPath,
 	}
 
 	jsonArgs, err := json.Marshal(NixBuildInvocationArgs)
@@ -398,7 +395,6 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 	if err != nil {
 		return "", err
 	}
-
 
 	var cmd *exec.Cmd
 	if ctx.AllowBuildShell && buildShell != nil {
