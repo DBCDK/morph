@@ -13,12 +13,16 @@ let
 in with lib;
 
 let
+  defaults = network.defaults or {};
+
   modules = { machineName, nodes, check }:
     [
       # Get the configuration of this machine from each network
       # expression, attaching _file attributes so the NixOS module
       # system can give sensible error messages.
       { imports = [ network.${machineName} ]; }
+
+      defaults
 
       ({ lib, ... }: {
         key = "deploy-stuff";
