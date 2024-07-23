@@ -92,6 +92,19 @@ let
     };
   });
 
+  preCheckType = submodule (_: {
+    options = {
+      cmd = mkOption {
+        type = listOf cmdHealthCheckType;
+        default = [ ];
+        description = ''
+          list of command prechecks,
+          runs healthcheck scripts pre-activation.
+        '';
+      };
+    };
+  });
+
   httpHealthCheckType = types.submodule (_: {
     options = {
       description = mkOption {
@@ -247,6 +260,13 @@ in
       default = { };
     };
 
+    preChecks = mkOption {
+      type = preCheckType;
+      description = ''
+        Pre-check configuration.
+      '';
+      default = { };
+    };
     tags = mkOption {
       type = listOf str;
       default = [ ];
