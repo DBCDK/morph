@@ -47,6 +47,7 @@ var (
 	deployUploadSecrets bool
 	deployReboot        bool
 	skipHealthChecks    bool
+	skipPrechecks       bool
 	showTrace           bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
@@ -135,6 +136,13 @@ func skipHealthChecksFlag(cmd *kingpin.CmdClause) {
 		BoolVar(&skipHealthChecks)
 }
 
+func skipPrechecksFlag(cmd *kingpin.CmdClause) {
+	cmd.
+		Flag("skip-pre-activation-checks", "Whether to skip all pre checks").
+		Default("False").
+		BoolVar(&skipPrechecks)
+}
+
 func showTraceFlag(cmd *kingpin.CmdClause) {
 	cmd.
 		Flag("show-trace", "Whether to pass --show-trace to all nix commands").
@@ -196,6 +204,7 @@ func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	askForSudoPasswdFlag(cmd)
 	getSudoPasswdCommand(cmd)
 	skipHealthChecksFlag(cmd)
+	skipPrechecksFlag(cmd)
 	cmd.
 		Flag("upload-secrets", "Upload secrets as part of the host deployment").
 		Default("False").
@@ -406,6 +415,15 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			}
 
 			fmt.Fprintln(os.Stderr)
+		}
+
+		if !skipPrechecks {
+			err := healthchecks.PerformPreChecks(sshContext, &host, timeout)
+			if err != nil {
+				fmt.Fprintln(os.Stderr)
+				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host pre-activation check failed.")
+				utils.Exit(1)
+			}
 		}
 
 		if doActivate {
