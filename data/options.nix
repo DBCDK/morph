@@ -280,8 +280,8 @@ in
   # The file will end up linked in /run/current-system along with
   # all derived dependencies.
   config.system.extraDependencies =
-    let cmds = concatMap (h: h.cmd) config.deployment.healthChecks.cmd;
-    in [
-      (pkgs.writeText "healthcheck-commands.txt" (concatStringsSep "\n" cmds))
-    ];
+    let
+      cmds = concatMap (h: h.cmd) (config.deployment.healthChecks.cmd ++ config.deployment.preChecks.cmd);
+    in
+    [ (pkgs.writeText "healthcheck-commands.txt" (concatStringsSep "\n" cmds)) ];
 }
