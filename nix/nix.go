@@ -21,6 +21,7 @@ import (
 )
 
 type Host struct {
+	PreChecks               healthchecks.PreConditions
 	HealthChecks            healthchecks.HealthChecks
 	Name                    string
 	NixosRelease            string
@@ -152,6 +153,10 @@ func (host *Host) GetTargetUser() string {
 
 func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
 	return host.HealthChecks
+}
+
+func (host *Host) GetPreActivationChecks() healthchecks.PreConditions {
+	return host.PreChecks
 }
 
 func (host *Host) GetTags() []string {
