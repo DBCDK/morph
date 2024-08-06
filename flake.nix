@@ -29,26 +29,30 @@
 
         # Eval the treefmt modules from ./treefmt.nix
         treefmtEval = treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
-      in {
+      in
+      rec {
         # for `nix fmt`
         formatter = treefmtEval.config.build.wrapper;
 
         # for `nix flake check`
         checks = {
+          vm_integration_tests = pkgs.callPackage ./nixos/tests/integration_tests.nix { inherit packages; };
           formatting = treefmtEval.config.build.check self;
           build = self.packages.${system}.morph;
-          pre-commit-check = let
-            # some treefmt formatters are not supported in pre-commit-hooks we
-            # filter them out for now.
-            toFilter = [ "yamlfmt" ];
-            filterFn = n: _v: (!builtins.elem n toFilter);
-            treefmtFormatters =
-              pkgs.lib.mapAttrs (_n: v: { inherit (v) enable; })
-              (pkgs.lib.filterAttrs filterFn (import ./treefmt.nix).programs);
-          in pre-commit-hooks.lib.${system}.run {
-            src = ./.;
-            hooks = treefmtFormatters;
-          };
+          pre-commit-check =
+            let
+              # some treefmt formatters are not supported in pre-commit-hooks we
+              # filter them out for now.
+              toFilter = [ "yamlfmt" ];
+              filterFn = n: _v: (!builtins.elem n toFilter);
+              treefmtFormatters =
+                pkgs.lib.mapAttrs (_n: v: { inherit (v) enable; })
+                  (pkgs.lib.filterAttrs filterFn (import ./treefmt.nix).programs);
+            in
+            pre-commit-hooks.lib.${system}.run {
+              src = ./.;
+              hooks = treefmtFormatters;
+            };
         };
 
         # Acessible through 'nix develop' or 'nix-shell' (legacy)
