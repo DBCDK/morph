@@ -1,7 +1,7 @@
 {
   projectRootFile = "flake.nix";
   programs = {
-    nixfmt.enable = true; # nix formatter
+    nixpkgs-fmt.enable = true; # nix formatter
     statix.enable = true; # nix static analysis
     deadnix.enable = true; # find dead nix code
     shellcheck.enable = true; # bash/shell
@@ -11,7 +11,7 @@
   };
   settings = {
     formatter = {
-      nixfmt.includes = [ "*.nix" "./data/*" ];
+      nixpkgs-fmt.includes = [ "*.nix" "./data/*" ];
       statix.includes = [ "*.nix" "./data/*" ];
       deadnix.includes = [ "*.nix" "./data/*" ];
     };

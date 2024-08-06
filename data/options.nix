@@ -165,7 +165,8 @@ let
     };
   });
 
-in {
+in
+{
   options.deployment = {
 
     targetHost = mkOption {
