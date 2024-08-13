@@ -10,10 +10,11 @@ let
   runCommand =
     network.network.runCommand or nwPkgs.runCommand or (import <nixpkgs>
       { }).runCommand;
-in with lib;
+in
+with lib;
 
 let
-  defaults = network.defaults or {};
+  defaults = network.defaults or { };
 
   modules = { machineName, nodes, check }:
     [
@@ -58,36 +59,41 @@ let
     "_file"
   ]);
 
-in rec {
+in
+rec {
   # Unchecked configuration of all machines.
   # Using unchecked config evaluation allows each machine to access other machines
   # configuration without recursing as full evaluation is prevented
-  uncheckedNodes = listToAttrs (map (machineName: {
-    name = machineName;
-    value = import evalConfig {
-      # Force decide system in module system
-      system = null;
-      modules = modules {
-        inherit machineName;
-        check = false;
-        nodes = uncheckedNodes;
+  uncheckedNodes = listToAttrs (map
+    (machineName: {
+      name = machineName;
+      value = import evalConfig {
+        # Force decide system in module system
+        system = null;
+        modules = modules {
+          inherit machineName;
+          check = false;
+          nodes = uncheckedNodes;
+        };
       };
-    };
-  }) machineNames);
+    })
+    machineNames);
 
   # Compute the definitions of the machines.
-  nodes = listToAttrs (map (machineName: {
-    name = machineName;
-    value = import evalConfig {
-      # Force decide system in module system
-      system = null;
-      modules = modules {
-        inherit machineName;
-        check = true;
-        nodes = uncheckedNodes;
+  nodes = listToAttrs (map
+    (machineName: {
+      name = machineName;
+      value = import evalConfig {
+        # Force decide system in module system
+        system = null;
+        modules = modules {
+          inherit machineName;
+          check = true;
+          nodes = uncheckedNodes;
+        };
       };
-    };
-  }) machineNames);
+    })
+    machineNames);
 
   deploymentInfoModule = {
     deployment = {
@@ -98,58 +104,62 @@ in rec {
   };
 
   # Phase 1: evaluate only the deployment attributes.
-  info = let network' = network;
-  in rec {
+  info =
+    let network' = network;
+    in rec {
 
-    machines = flip mapAttrs nodes (n: v':
-      let v = scrubOptionValue v';
-      in {
-        inherit (v.config.deployment)
-          targetHost targetPort targetUser secrets healthChecks buildOnly
-          substituteOnDestination tags;
-        name = n;
-        nixosRelease = v.config.system.nixos.release or (removeSuffix
-          v.config.system.nixos.version.suffix v.config.system.nixos.version);
-        nixConfig = mapAttrs (n: v:
-          if builtins.isString v then
-            v
-          else
-            throw "nix option '${n}' must have a string typed value")
-          (network'.network.nixConfig or { });
-      });
+      machines = flip mapAttrs nodes (n: v':
+        let v = scrubOptionValue v';
+        in {
+          inherit (v.config.deployment)
+            targetHost targetPort targetUser secrets healthChecks buildOnly
+            substituteOnDestination tags;
+          name = n;
+          nixosRelease = v.config.system.nixos.release or (removeSuffix
+            v.config.system.nixos.version.suffix
+            v.config.system.nixos.version);
+          nixConfig = mapAttrs
+            (n: v:
+              if builtins.isString v then
+                v
+              else
+                throw "nix option '${n}' must have a string typed value")
+            (network'.network.nixConfig or { });
+        });
 
-    machineList = map (key: getAttr key machines) (attrNames machines);
-    network = network'.network or { };
-    deployment = {
-      hosts = machineList;
-      meta = {
-        description = network.description or "";
-        ordering = network.ordering or { };
+      machineList = map (key: getAttr key machines) (attrNames machines);
+      network = network'.network or { };
+      deployment = {
+        hosts = machineList;
+        meta = {
+          description = network.description or "";
+          ordering = network.ordering or { };
+        };
       };
-    };
 
-    buildShell = network.buildShell.drvPath or null;
-  };
+      buildShell = network.buildShell.drvPath or null;
+    };
 
   # Phase 2: build complete machine configurations.
   machines = { argsFile, buildTargets ? null }:
     let
       fileArgs = builtins.fromJSON (builtins.readFile argsFile);
       nodes' = filterAttrs (n: _v: elem n fileArgs.Names) nodes;
-    in runCommand "morph" { preferLocalBuild = true; }
-    (if buildTargets == null then ''
-      mkdir -p $out
-      ${toString (mapAttrsToList (nodeName: nodeDef: ''
-        ln -s ${nodeDef.config.system.build.toplevel} $out/${nodeName}
-      '') nodes')}
-    '' else ''
-      mkdir -p $out
-      ${toString (mapAttrsToList (nodeName: nodeDef: ''
-        mkdir -p $out/${nodeName}
-        ${toString (mapAttrsToList (buildName: buildFn: ''
-          ln -s ${buildFn nodeDef} $out/${nodeName}/${buildName}
-        '') buildTargets)}
-      '') nodes')}
-    '');
+    in
+    runCommand "morph" { preferLocalBuild = true; }
+      (if buildTargets == null then ''
+        mkdir -p $out
+        ${toString (mapAttrsToList (nodeName: nodeDef: ''
+          ln -s ${nodeDef.config.system.build.toplevel} $out/${nodeName}
+        '') nodes')}
+      '' else ''
+        mkdir -p $out
+        ${toString (mapAttrsToList (nodeName: nodeDef: ''
+          mkdir -p $out/${nodeName}
+          ${toString (mapAttrsToList (buildName: buildFn: ''
+            ln -s ${buildFn nodeDef} $out/${nodeName}/${buildName}
+          '') buildTargets)}
+        '') nodes')}
+      '');
 
 }
