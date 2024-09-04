@@ -166,6 +166,16 @@ Health checks will be repeated until success, and the interval can be configured
 
 It is currently possible to have expressions like `"test \"$(systemctl list-units --failed --no-legend --no-pager |wc -l)\" -eq 0"` (count number of failed systemd units, fail if non-zero) as the first argument in a cmd-healthcheck. This works, but is discouraged, and might break at any time.
 
+
+### Pre-deploy checks (experimental)
+
+Morph supports running checks before changing the target host (note: files will still be pushed to the host).
+These checks work exactly like health checks, which means they will run forever until they have all succeeded.
+This is an _experimental feature that is very likely to change_ in the future. Comments and feedback welcome :).
+
+Pre-deploy checks can be defined using `deployment.preDeployChecks`.
+
+
 ### Advanced configuration
 
 **nix.conf-options:** The "network"-attrset supports a sub-attrset named "nixConfig". Options configured here will pass `--option <name> <value>` to all nix commands.
