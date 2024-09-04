@@ -9,16 +9,16 @@ import (
 	"time"
 )
 
-func Perform(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
-	fmt.Fprintf(os.Stderr, "Running healthchecks on %s (%s):\n", host.GetName(), host.GetTargetHost())
+func PerformChecks(sshContext *ssh.SSHContext, checkName string, host Host, healthChecks HealthChecks, timeout int) (err error) {
+	fmt.Fprintf(os.Stderr, "Running %s on %s (%s):\n", checkName, host.GetName(), host.GetTargetHost())
 
 	wg := sync.WaitGroup{}
-	for _, healthCheck := range host.GetHealthChecks().Cmd {
+	for _, healthCheck := range healthChecks.Cmd {
 		wg.Add(1)
 		healthCheck.SshContext = sshContext
 		go runCheckUntilSuccess(host, healthCheck, &wg)
 	}
-	for _, healthCheck := range host.GetHealthChecks().Http {
+	for _, healthCheck := range healthChecks.Http {
 		wg.Add(1)
 		go runCheckUntilSuccess(host, healthCheck, &wg)
 	}
@@ -39,20 +39,28 @@ func Perform(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
 		}()
 	}
 
-	// run health checks until done or timeout reached. Failing health checks will add themself to the chan again
+	// run checks until done or timeout reached. Failing health checks will add themself to the chan again
 	done := false
 	for !done {
 		select {
 		case <-doneChan:
-			fmt.Fprintln(os.Stderr, "Health checks OK")
+			fmt.Fprintln(os.Stderr, checkName + " OK")
 			done = true
 		case <-timeoutChan:
-			fmt.Fprintf(os.Stderr, "Timeout: Gave up waiting for health checks to complete after %d seconds\n", timeout)
-			return errors.New("timeout running health checks")
+			fmt.Fprintf(os.Stderr, "Timeout: Gave up waiting for %s to complete after %d seconds\n", checkName, timeout)
+			return errors.New(fmt.Sprintf("timeout running %s on %s", checkName, host.GetName()))
 		}
 	}
 
 	return nil
+}
+
+func PerformPreDeployChecks(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
+	return PerformChecks(sshContext, "pre-deploy checks", host, host.GetPreActivationChecks(), timeout)
+}
+
+func PerformHealthChecks(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
+	return PerformChecks(sshContext, "health checks", host, host.GetHealthChecks(), timeout)
 }
 
 func runCheckUntilSuccess(host Host, healthCheck HealthCheck, wg *sync.WaitGroup) {
@@ -67,43 +75,4 @@ func runCheckUntilSuccess(host Host, healthCheck HealthCheck, wg *sync.WaitGroup
 		}
 	}
 	wg.Done()
-}
-
-func PerformPreChecks(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
-	fmt.Fprintf(os.Stderr, "Running pre-activation checks on %s (%s):\n", host.GetName(), host.GetTargetHost())
-
-	wg := sync.WaitGroup{}
-	for _, healthCheck := range host.GetPreActivationChecks().Cmd {
-		wg.Add(1)
-		healthCheck.SshContext = sshContext
-		go runCheckUntilSuccess(host, healthCheck, &wg)
-	}
-
-	doneChan := make(chan bool)
-
-	go func() {
-		wg.Wait()
-		doneChan <- true
-	}()
-
-	timeoutChan := make(chan bool)
-
-	if timeout > 0 {
-		go func() {
-			time.Sleep(time.Duration(timeout) * time.Second)
-			timeoutChan <- true
-		}()
-	}
-	done := false
-	for !done {
-		select {
-		case <-doneChan:
-			fmt.Fprintln(os.Stderr, "Pre-activation checks OK")
-			done = true
-		case <-timeoutChan:
-			fmt.Fprintf(os.Stderr, "Timeout: Gave up waiting for pre-activation checks to complete after %d seconds\n", timeout)
-			return errors.New("timeout running health checks")
-		}
-	}
-	return nil
 }

@@ -92,19 +92,6 @@ let
     };
   });
 
-  preCheckType = submodule (_: {
-    options = {
-      cmd = mkOption {
-        type = listOf cmdHealthCheckType;
-        default = [ ];
-        description = ''
-          list of command prechecks,
-          runs healthcheck scripts pre-activation.
-        '';
-      };
-    };
-  });
-
   httpHealthCheckType = types.submodule (_: {
     options = {
       description = mkOption {
@@ -260,8 +247,8 @@ in
       default = { };
     };
 
-    preChecks = mkOption {
-      type = preCheckType;
+    preDeployChecks = mkOption {
+      type = healthCheckType;
       description = ''
         Pre-check configuration.
       '';
@@ -281,7 +268,7 @@ in
   # all derived dependencies.
   config.system.extraDependencies =
     let
-      cmds = concatMap (h: h.cmd) (config.deployment.healthChecks.cmd ++ config.deployment.preChecks.cmd);
+      cmds = concatMap (h: h.cmd) (config.deployment.preDeployChecks.cmd ++ config.deployment.healthChecks.cmd);
     in
     [ (pkgs.writeText "healthcheck-commands.txt" (concatStringsSep "\n" cmds)) ];
 }

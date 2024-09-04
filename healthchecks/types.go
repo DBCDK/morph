@@ -18,7 +18,7 @@ type Host interface {
 	GetTargetPort() int
 	GetTargetUser() string
 	GetHealthChecks() HealthChecks
-	GetPreActivationChecks() PreConditions
+	GetPreActivationChecks() HealthChecks
 }
 
 type HealthChecks struct {
@@ -26,19 +26,7 @@ type HealthChecks struct {
 	Cmd  []CmdHealthCheck
 }
 
-type PreConditions struct {
-	Cmd []PreActivationCheck
-}
-
 type CmdHealthCheck struct {
-	SshContext  *ssh.SSHContext
-	Description string
-	Cmd         []string
-	Period      int
-	Timeout     int
-}
-
-type PreActivationCheck struct {
 	SshContext  *ssh.SSHContext
 	Description string
 	Cmd         []string
@@ -78,16 +66,16 @@ func (healthCheck CmdHealthCheck) Run(host Host) error {
 
 	cmd, err := healthCheck.SshContext.CmdContext(ctx, host, healthCheck.Cmd...)
 	if err != nil {
-		errorMessage := fmt.Sprintf("Health check error: %s", err.Error())
+		errorMessage := fmt.Sprintf("error: %s", err.Error())
 		return errors.New(errorMessage)
 	}
 	data, err := cmd.CombinedOutput()
 	if ctx.Err() != nil {
-		errorMessage := fmt.Sprintf("Health check error: Timeout after %ds", healthCheck.Timeout)
+		errorMessage := fmt.Sprintf("Timeout after %ds", healthCheck.Timeout)
 		return errors.New(errorMessage)
 	}
 	if err != nil {
-		errorMessage := fmt.Sprintf("Health check error: %s", string(data))
+		errorMessage := fmt.Sprintf("output: %s", string(data))
 		return errors.New(errorMessage)
 	}
 
@@ -149,35 +137,4 @@ func (healthCheck HttpHealthCheck) Run(host Host) error {
 	} else {
 		return errors.New(fmt.Sprintf("Got non 2xx status code (%s)", resp.Status))
 	}
-}
-
-func (pre PreActivationCheck) GetDescription() string {
-	return pre.Description
-}
-
-func (pre PreActivationCheck) GetPeriod() int {
-	return pre.Period
-}
-
-func (pre PreActivationCheck) Run(host Host) error {
-	ctx, cancel := utils.ContextWithConditionalTimeout(context.TODO(), pre.Timeout)
-	defer cancel()
-
-	cmd, err := pre.SshContext.CmdContext(ctx, host, pre.Cmd...)
-	if err != nil {
-		errorMessage := fmt.Sprintf("Pre-activation check error: %s", err.Error())
-		return errors.New(errorMessage)
-	}
-	data, err := cmd.CombinedOutput()
-	if ctx.Err() != nil {
-		errorMessage := fmt.Sprintf("Pre-activation error: Timeout after %ds", pre.Timeout)
-		return errors.New(errorMessage)
-	}
-	if err != nil {
-		errorMessage := fmt.Sprintf("Pre-activation error: %s", string(data))
-		return errors.New(errorMessage)
-	}
-
-	return nil
-
 }

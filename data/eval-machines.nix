@@ -112,7 +112,7 @@ rec {
         let v = scrubOptionValue v';
         in {
           inherit (v.config.deployment)
-            targetHost targetPort targetUser secrets healthChecks preChecks buildOnly
+            targetHost targetPort targetUser secrets preDeployChecks healthChecks buildOnly
             substituteOnDestination tags;
           name = n;
           nixosRelease = v.config.system.nixos.release or (removeSuffix
