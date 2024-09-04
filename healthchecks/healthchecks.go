@@ -56,7 +56,7 @@ func PerformChecks(sshContext *ssh.SSHContext, checkName string, host Host, heal
 }
 
 func PerformPreDeployChecks(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {
-	return PerformChecks(sshContext, "pre-deploy checks", host, host.GetPreActivationChecks(), timeout)
+	return PerformChecks(sshContext, "pre-deploy checks", host, host.GetPreDeployChecks(), timeout)
 }
 
 func PerformHealthChecks(sshContext *ssh.SSHContext, host Host, timeout int) (err error) {

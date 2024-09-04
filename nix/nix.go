@@ -155,7 +155,7 @@ func (host *Host) GetHealthChecks() healthchecks.HealthChecks {
 	return host.HealthChecks
 }
 
-func (host *Host) GetPreActivationChecks() healthchecks.HealthChecks {
+func (host *Host) GetPreDeployChecks() healthchecks.HealthChecks {
 	return host.PreDeployChecks
 }
 

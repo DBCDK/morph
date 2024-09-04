@@ -18,7 +18,7 @@ type Host interface {
 	GetTargetPort() int
 	GetTargetUser() string
 	GetHealthChecks() HealthChecks
-	GetPreActivationChecks() HealthChecks
+	GetPreDeployChecks() HealthChecks
 }
 
 type HealthChecks struct {
