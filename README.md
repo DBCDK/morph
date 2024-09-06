@@ -21,6 +21,19 @@ To run multiple steps in parallel also requires changing the way progress is sho
 Please. Here be dragons. Don't run this branch in production. See it more as an experimental playground, that is shure to have broken bits all over.
 
 
+## Implementation status
+
+
+### working
+
+* build
+* push
+
+
+### not working
+
+Everything else
+
 
 
 
