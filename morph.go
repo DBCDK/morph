@@ -5,13 +5,17 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/DBCDK/kingpin"
 	"github.com/DBCDK/morph/filter"
 	"github.com/DBCDK/morph/healthchecks"
 	"github.com/DBCDK/morph/nix"
+	"github.com/DBCDK/morph/planner"
 	"github.com/DBCDK/morph/secrets"
 	"github.com/DBCDK/morph/ssh"
 	"github.com/DBCDK/morph/utils"
@@ -58,6 +62,12 @@ var (
 	executeCommand      []string
 	keepGCRoot          = app.Flag("keep-result", "Keep latest build in .gcroots to prevent it from being garbage collected").Default("False").Bool()
 	allowBuildShell     = app.Flag("allow-build-shell", "Allow using `network.buildShell` to build in a nix-shell which can execute arbitrary commands on the local system").Default("False").Bool()
+	planOnly            = app.Flag("plan-only", "Print the execution plan and exit").Default("False").Bool()
+	hostsMap            = make(map[string]nix.Host)
+	cache               = make(map[string]string)
+	cacheChan           = make(chan planner.StepData)
+	stepsDone           = make(map[string]*sync.WaitGroup)
+	stepsDoneChan       = make(chan planner.StepStatus)
 )
 
 func deploymentArg(cmd *kingpin.CmdClause) {
@@ -281,28 +291,234 @@ func main() {
 	hosts, err := getHosts(deployment)
 	handleError(err)
 
-	switch clause {
-	case build.FullCommand():
-		_, err = execBuild(hosts)
-	case push.FullCommand():
-		_, err = execPush(hosts)
-	case deploy.FullCommand():
-		_, err = execDeploy(hosts)
-	case healthCheck.FullCommand():
-		err = execHealthCheck(hosts)
-	case uploadSecrets.FullCommand():
-		err = execUploadSecrets(createSSHContext(), hosts, nil)
-	case listSecrets.FullCommand():
-		if asJson {
-			err = execListSecretsAsJson(hosts)
-		} else {
-			execListSecrets(hosts)
-		}
-	case execute.FullCommand():
-		err = execExecute(hosts)
+	go cacheWriter()
+	go plannerStepStatusWriter()
+
+	for _, host := range hosts {
+		hostsMap[host.Name] = host
 	}
 
-	handleError(err)
+	plan := planner.EmptyStep()
+	plan.Description = "Root of execution plan"
+
+	fmt.Println("Execution plan:")
+
+	switch clause {
+	case build.FullCommand():
+
+		plan = planner.AddSteps(plan, planner.CreateBuildPlan(hosts))
+
+	case push.FullCommand():
+
+		build := planner.CreateBuildPlan(hosts)
+		push := planner.CreatePushPlan(build.Id, hosts)
+		plan = planner.AddSteps(plan, build, push)
+
+	case deploy.FullCommand():
+		fmt.Println("Execution plan: deploy: Not implemented")
+
+	case healthCheck.FullCommand():
+		fmt.Println("Execution plan: check-health: Not implemented")
+
+	case uploadSecrets.FullCommand():
+		fmt.Println("Execution plan: upload-secrets: Not implemented")
+
+	case listSecrets.FullCommand():
+		fmt.Println("Execution plan: list-secrets: Not implemented")
+
+	case execute.FullCommand():
+		fmt.Println("Execution plan: execute: Not implemented")
+
+	}
+
+	planJson, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(planJson))
+
+	if *planOnly {
+		// Don't execute the plan
+		return
+	}
+
+	executePlan(plan)
+
+	// switch clause {
+	// case build.FullCommand():
+	// 	_, err = execBuild(hosts)
+	// case push.FullCommand():
+	// 	_, err = execPush(hosts)
+	// case deploy.FullCommand():
+	// 	_, err = execDeploy(hosts)
+	// case healthCheck.FullCommand():
+	// 	err = execHealthCheck(hosts)
+	// case uploadSecrets.FullCommand():
+	// 	err = execUploadSecrets(createSSHContext(), hosts, nil)
+	// case listSecrets.FullCommand():
+	// 	if asJson {
+	// 		err = execListSecretsAsJson(hosts)
+	// 	} else {
+	// 		execListSecrets(hosts)
+	// 	}
+	// case execute.FullCommand():
+	// 	err = execExecute(hosts)
+	// }
+
+	// handleError(err)
+}
+
+func cacheWriter() {
+	for update := range cacheChan {
+		fmt.Printf("cache update: %s = %s\n", update.Key, update.Value)
+		cache[update.Key] = update.Value
+	}
+}
+
+func plannerStepStatusWriter() {
+	for stepStatus := range stepsDoneChan {
+		fmt.Printf("step update: %s = %s\n", stepStatus.Id, stepStatus.Status)
+		switch strings.ToLower(stepStatus.Status) {
+		case "started":
+			var stepWg = &sync.WaitGroup{}
+			stepWg.Add(1)
+
+			stepsDone[stepStatus.Id] = stepWg
+		case "done":
+			stepsDone[stepStatus.Id].Done()
+
+		default:
+			panic("Only status=started and status=done allowed")
+		}
+	}
+}
+
+func executePlan(plan planner.Step) error {
+	// not sure if anything special has to be done for the top-level step..
+
+	return executeStep(plan)
+}
+
+func waitForDependencies(id string, hint string, dependencies []string) {
+	fmt.Printf("%s: depends on %d steps: %v\n", id, len(dependencies), dependencies)
+
+	for _, dependency := range dependencies {
+		for {
+			// Wait for the dependency to actually start running
+			// It's probably better to pre-create all dependencies so this isn't necessary
+			fmt.Printf("%s: %s: waiting for %s to start\n", id, hint, dependency)
+
+			if dependencyWg, dependencyStarted := stepsDone[dependency]; dependencyStarted {
+				// Wait for dependency to finish runningCheck if the dependencies update channel has been closed (=> it's done), and break the loop
+				dependencyWg.Wait()
+				fmt.Printf("%s: %s: %s done\n", id, hint, dependency)
+				break
+
+			}
+
+			// Sleep if we haven't seen the dependency
+			time.Sleep(1 * time.Second)
+		}
+	}
+
+	fmt.Println("hest")
+}
+
+func executeStep(step planner.Step) error {
+	fmt.Printf("Running step %s: %s (dependencies: %v)\n", step.Action, step.Description, step.DependsOn)
+
+	stepsDoneChan <- planner.StepStatus{Id: step.Id, Status: "started"}
+
+	waitForDependencies(step.Id, "dependencies", step.DependsOn)
+
+	switch step.Action {
+	case "build":
+		executeBuildStep(step)
+
+	case "push":
+		executePushStep(step)
+
+	case "none":
+		fallthrough
+	case "":
+		// wrapper step, nothing to do
+	}
+
+	// subStepIds := make([]string, 0)
+
+	var wg sync.WaitGroup
+
+	for _, subStep := range step.Steps {
+		// subStepIds = append(subStepIds, subStep.Id)
+
+		wg.Add(1)
+		go func(step planner.Step) {
+			defer wg.Done()
+			executeStep(step)
+		}(subStep)
+	}
+
+	// Wait for children to all be ready, before making the current step ready
+	// waitForDependencies(step.Id, "childrenS", subStepIds)
+
+	// FIXME: This will break when actually enabling multi-threading - this step has to wait for all sub steps to complete!
+
+	wg.Wait()
+	wg.Wait()
+	fmt.Println("donkey")
+	stepsDoneChan <- planner.StepStatus{Id: step.Id, Status: "done"}
+
+	return nil
+}
+
+func executeBuildStep(step planner.Step) error {
+	hosts := step.Options["hosts"].([]string)
+
+	nixHosts := make([]nix.Host, 0)
+
+	fmt.Println("Building hosts:")
+	for _, host := range hosts {
+		fmt.Printf("- %s\n", host)
+		nixHosts = append(nixHosts, hostsMap[host])
+	}
+
+	resultPath, err := execBuild(nixHosts)
+	fmt.Println(resultPath)
+
+	for _, host := range hosts {
+		hostPathSymlink := path.Join(resultPath, host)
+		hostPath, err := filepath.EvalSymlinks(hostPathSymlink)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println(hostPathSymlink)
+		fmt.Println(hostPath)
+
+		fmt.Println("ares1")
+		cacheChan <- planner.StepData{Key: "closure:" + host, Value: hostPath}
+		fmt.Println("ares2")
+
+		// store hostPath to be fetched by other steps
+	}
+
+	return err
+}
+
+func executePushStep(step planner.Step) error {
+	hostName := step.Options["to"].(string)
+	host := hostsMap[hostName]
+	cacheKey := "closure:" + host.Name
+	fmt.Println("cache key: " + cacheKey)
+	closure := cache[cacheKey]
+
+	fmt.Printf("Pushing %s to %s\n", closure, host.TargetHost)
+
+	sshContext := createSSHContext()
+	err := nix.Push(sshContext, host, closure)
+
+	return err
 }
 
 func handleError(err error) {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -19,6 +20,16 @@ import (
 	"github.com/DBCDK/morph/ssh"
 	"github.com/DBCDK/morph/utils"
 )
+
+type PrefixWriter struct {
+	prefix      []byte
+	destination io.Writer
+}
+
+func (prefixWriter PrefixWriter) Write(inputBytes []byte) (n int, err error) {
+	bytes := append(prefixWriter.prefix, inputBytes...)
+	return prefixWriter.destination.Write(bytes)
+}
 
 type Host struct {
 	PreDeployChecks         healthchecks.HealthChecks
@@ -517,8 +528,10 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 		)
 		cmd.Env = env
 
-		cmd.Stdout = os.Stderr
-		cmd.Stderr = os.Stderr
+		writer := PrefixWriter{prefix: []byte(host.TargetHost + ": "), destination: os.Stderr}
+
+		cmd.Stdout = writer
+		cmd.Stderr = writer
 		err = cmd.Run()
 
 		if err != nil {
