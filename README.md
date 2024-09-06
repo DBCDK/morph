@@ -1,3 +1,29 @@
+# This branch is unofficial and super experimental and should never be used in production
+
+Morph was concieved many, many years ago, and has in my opinion grown quite difficult to maintain. The first version was written half in anger, and was probably more of a proof of concept, than a real tool worthy of using in production. Just look at `morph.go`. Almost 800 lines of complicated conditionals, that tries to carefully make smart decisions on what needs to be done based on the command line flags.
+
+Morph works. I'm super proud of where Morph is today, I'm happy about all the unexpected contributions from people around the world, and I'm happy that the team at DBC continued to improve Morph after I left. But I also think now is a good time to start improving and rethinking how Morph works.
+
+I'm not sure what this branch will lead to. Maybe it'll be the start of Morph v2.0, because after 6 years I believe it's ok to risk breaking backwards compatibility here and there, if that's what it takes. Or maybe we can manage to stay backwards compatible, while still making huge changes to the user experience, and that would probably also warrant a major version bump.
+
+## Ok but just tell me - what is this branch anyways?
+
+Managing big deployments with morph can be quite cumbersome, due to morph not supporting running multiple parallel deployments. We tried working around this by making a pretty big number of options for selection parts of a deployment, to make it not-too-bad to run multiple instances of Morph in parallel. However, with pre-deploy-checks also coming to Morph now, I want to investigate whether Morph can do more things better if Morph were to gain a better understanding about what and how things can be done in parallel.
+
+The execution planner is the first idea towards that. The idea is to create a two-pass system, where Morph first generates a plan of everything that will have to be done (or, alternatively, let's the user supply a plan), and a second pass that is the engine that will be able to execute this plan.
+
+Execution plans will be able to define dependencies between different steps, just as having a mechanism of sharing data between steps (e.g.: the build step will store the build paths to make them available for the push step, and so on).
+
+All of the current functionality will be split into more independent parts, and the hope is that that will make the parts easier to reason about. It also means that almost all code throughout morph will be changing in some manner.
+
+To run multiple steps in parallel also requires changing the way progress is shown on screen. At the very least all output from remove systems forwarded to STDOUT/STDERR will need to be prefixed with information such as the host it's coming from. But it's also likely that the UI will change radically, because it will also be necessary to show what host is doing what when a deployment is running.
+
+Please. Here be dragons. Don't run this branch in production. See it more as an experimental playground, that is shure to have broken bits all over.
+
+
+
+
+
 # morph
 [![Build](https://github.com/DBCDK/morph/actions/workflows/build.yaml/badge.svg?branch=master)](https://github.com/DBCDK/morph/actions/workflows/build.yaml)
 
