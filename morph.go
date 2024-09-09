@@ -47,6 +47,7 @@ var (
 	deployUploadSecrets bool
 	deployReboot        bool
 	skipHealthChecks    bool
+	skipPreDeployChecks bool
 	showTrace           bool
 	healthCheck         = healthCheckCmd(app.Command("check-health", "Run health checks"))
 	uploadSecrets       = uploadSecretsCmd(app.Command("upload-secrets", "Upload secrets"))
@@ -135,6 +136,13 @@ func skipHealthChecksFlag(cmd *kingpin.CmdClause) {
 		BoolVar(&skipHealthChecks)
 }
 
+func skipPreDeployChecksFlag(cmd *kingpin.CmdClause) {
+	cmd.
+		Flag("skip-pre-deploy-checks", "Whether to skip all pre-deploy checks").
+		Default("False").
+		BoolVar(&skipPreDeployChecks)
+}
+
 func showTraceFlag(cmd *kingpin.CmdClause) {
 	cmd.
 		Flag("show-trace", "Whether to pass --show-trace to all nix commands").
@@ -196,6 +204,7 @@ func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	askForSudoPasswdFlag(cmd)
 	getSudoPasswdCommand(cmd)
 	skipHealthChecksFlag(cmd)
+	skipPreDeployChecksFlag(cmd)
 	cmd.
 		Flag("upload-secrets", "Upload secrets as part of the host deployment").
 		Default("False").
@@ -408,6 +417,15 @@ func execDeploy(hosts []nix.Host) (string, error) {
 			fmt.Fprintln(os.Stderr)
 		}
 
+		if !skipPreDeployChecks {
+			err := healthchecks.PerformPreDeployChecks(sshContext, &host, timeout)
+			if err != nil {
+				fmt.Fprintln(os.Stderr)
+				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host pre-deploy check failed.")
+				utils.Exit(1)
+			}
+		}
+
 		if doActivate {
 			err = activateConfiguration(sshContext, singleHostInList, resultPath)
 			if err != nil {
@@ -434,7 +452,7 @@ func execDeploy(hosts []nix.Host) (string, error) {
 		}
 
 		if !skipHealthChecks {
-			err := healthchecks.Perform(sshContext, &host, timeout)
+			err := healthchecks.PerformHealthChecks(sshContext, &host, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr)
 				fmt.Fprintln(os.Stderr, "Not deploying to additional hosts, since a host health check failed.")
@@ -468,7 +486,7 @@ func execHealthCheck(hosts []nix.Host) error {
 			fmt.Fprintf(os.Stderr, "Healthchecks are disabled for build-only host: %s\n", host.Name)
 			continue
 		}
-		err = healthchecks.Perform(sshContext, &host, timeout)
+		err = healthchecks.PerformHealthChecks(sshContext, &host, timeout)
 	}
 
 	if err != nil {
@@ -492,7 +510,7 @@ func execUploadSecrets(sshContext *ssh.SSHContext, hosts []nix.Host, phase *stri
 		}
 
 		if !skipHealthChecks {
-			err = healthchecks.Perform(sshContext, &host, timeout)
+			err = healthchecks.PerformHealthChecks(sshContext, &host, timeout)
 			if err != nil {
 				fmt.Fprintln(os.Stderr)
 				fmt.Fprintln(os.Stderr, "Not uploading to additional hosts, since a host health check failed.")

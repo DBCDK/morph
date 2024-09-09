@@ -18,6 +18,7 @@ type Host interface {
 	GetTargetPort() int
 	GetTargetUser() string
 	GetHealthChecks() HealthChecks
+	GetPreDeployChecks() HealthChecks
 }
 
 type HealthChecks struct {
@@ -65,16 +66,16 @@ func (healthCheck CmdHealthCheck) Run(host Host) error {
 
 	cmd, err := healthCheck.SshContext.CmdContext(ctx, host, healthCheck.Cmd...)
 	if err != nil {
-		errorMessage := fmt.Sprintf("Health check error: %s", err.Error())
+		errorMessage := fmt.Sprintf("error: %s", err.Error())
 		return errors.New(errorMessage)
 	}
 	data, err := cmd.CombinedOutput()
 	if ctx.Err() != nil {
-		errorMessage := fmt.Sprintf("Health check error: Timeout after %ds", healthCheck.Timeout)
+		errorMessage := fmt.Sprintf("Timeout after %ds", healthCheck.Timeout)
 		return errors.New(errorMessage)
 	}
 	if err != nil {
-		errorMessage := fmt.Sprintf("Health check error: %s", string(data))
+		errorMessage := fmt.Sprintf("output: %s", string(data))
 		return errors.New(errorMessage)
 	}
 

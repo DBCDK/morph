@@ -47,6 +47,11 @@ in {
           }
         ];
       };
+
+      preDeployChecks = {
+        # Works exactly like health checks
+        # Have you read the warning about this feature in the README?
+      };
     };
   };
 }
