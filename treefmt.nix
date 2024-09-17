@@ -1,7 +1,7 @@
 {
   projectRootFile = "flake.nix";
   programs = {
-    nixpkgs-fmt.enable = true; # nix formatter
+    nixfmt.enable = true; # nix formatter
     statix.enable = true; # nix static analysis
     shellcheck.enable = true; # bash/shell
     taplo.enable = true; # toml
@@ -10,7 +10,7 @@
   };
   settings = {
     formatter = {
-      nixpkgs-fmt.includes = [ "*.nix" "./data/*" ];
+      nixfmt.includes = [ "*.nix" "./data/*" ];
       statix.includes = [ "*.nix" "./data/*" ];
     };
   };

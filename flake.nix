@@ -43,7 +43,7 @@
             let
               # some treefmt formatters are not supported in pre-commit-hooks we
               # filter them out for now.
-              toFilter = [ "yamlfmt" ];
+              toFilter = [ "yamlfmt" "nixfmt"];
               filterFn = n: _v: (!builtins.elem n toFilter);
               treefmtFormatters =
                 pkgs.lib.mapAttrs (_n: v: { inherit (v) enable; })
@@ -51,7 +51,7 @@
             in
             pre-commit-hooks.lib.${system}.run {
               src = ./.;
-              hooks = treefmtFormatters;
+              hooks = treefmtFormatters // { nixfmt-rfc-style.enable = true; };
             };
         };
 
