@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 with lib.types;
@@ -50,8 +55,7 @@ let
       action = mkOption {
         default = [ ];
         type = listOf str;
-        description =
-          "Action to perform on remote host after uploading secret.";
+        description = "Action to perform on remote host after uploading secret.";
       };
 
       mkDirs = mkOption {
@@ -66,7 +70,10 @@ let
 
       uploadAt = mkOption {
         default = "pre-activation";
-        type = enum [ "pre-activation" "post-activation" ];
+        type = enum [
+          "pre-activation"
+          "post-activation"
+        ];
         description = ''
           When to upload the secret.
 
@@ -268,7 +275,9 @@ in
   # all derived dependencies.
   config.system.extraDependencies =
     let
-      cmds = concatMap (h: h.cmd) (config.deployment.preDeployChecks.cmd ++ config.deployment.healthChecks.cmd);
+      cmds = concatMap (h: h.cmd) (
+        config.deployment.preDeployChecks.cmd ++ config.deployment.healthChecks.cmd
+      );
     in
     [ (pkgs.writeText "healthcheck-commands.txt" (concatStringsSep "\n" cmds)) ];
 }

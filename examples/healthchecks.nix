@@ -1,5 +1,7 @@
-let pkgs = import (import ../nixpkgs.nix) { };
-in {
+let
+  pkgs = import (import ../nixpkgs.nix) { };
+in
+{
   network = {
     inherit pkgs;
     description = "health check demo hosts";
@@ -24,10 +26,16 @@ in {
 
     deployment = {
       healthChecks = {
-        cmd = [{
-          cmd = [ "true" "one argument" "another argument" ];
-          description = "Testing that 'true' works.";
-        }];
+        cmd = [
+          {
+            cmd = [
+              "true"
+              "one argument"
+              "another argument"
+            ];
+            description = "Testing that 'true' works.";
+          }
+        ];
 
         http = [
           {
@@ -40,8 +48,7 @@ in {
           {
             scheme = "https";
             port = 443;
-            host =
-              "some-other-host.example.com"; # defaults to the hostname of the host if unset
+            host = "some-other-host.example.com"; # defaults to the hostname of the host if unset
             path = "/health";
             description = "Check whether $imaginaryService is running.";
           }
