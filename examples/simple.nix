@@ -1,9 +1,16 @@
-let pkgs = import (import ../nixpkgs.nix) { };
-in {
+let
+  pkgs = import (import ../nixpkgs.nix) { };
+in
+{
   network = {
     inherit pkgs;
     description = "simple hosts";
-    ordering = { tags = [ "db" "web" ]; };
+    ordering = {
+      tags = [
+        "db"
+        "web"
+      ];
+    };
   };
 
   "web01" = _: {

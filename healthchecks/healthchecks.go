@@ -44,7 +44,7 @@ func PerformChecks(sshContext *ssh.SSHContext, checkName string, host Host, heal
 	for !done {
 		select {
 		case <-doneChan:
-			fmt.Fprintln(os.Stderr, checkName + " OK")
+			fmt.Fprintln(os.Stderr, checkName+" OK")
 			done = true
 		case <-timeoutChan:
 			fmt.Fprintf(os.Stderr, "Timeout: Gave up waiting for %s to complete after %d seconds\n", checkName, timeout)

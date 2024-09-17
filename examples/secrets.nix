@@ -1,5 +1,7 @@
-let pkgs = import (import ../nixpkgs.nix) { };
-in {
+let
+  pkgs = import (import ../nixpkgs.nix) { };
+in
+{
   network = {
     inherit pkgs;
     description = "webserver with secrets";
@@ -14,7 +16,12 @@ in {
           owner.user = "nginx";
           owner.group = "root";
           permissions = "0400"; # this is the default
-          action = [ "sudo" "systemctl" "reload" "nginx.service" ];
+          action = [
+            "sudo"
+            "systemctl"
+            "reload"
+            "nginx.service"
+          ];
         };
       };
     };

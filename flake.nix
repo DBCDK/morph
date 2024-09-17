@@ -4,7 +4,9 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
 
-    flake-utils = { url = "github:numtide/flake-utils"; };
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+    };
 
     pre-commit-hooks = {
       url = "github:cachix/pre-commit-hooks.nix";
@@ -18,8 +20,16 @@
     };
   };
 
-  outputs = { self, pre-commit-hooks, nixpkgs, flake-utils, treefmt-nix }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      pre-commit-hooks,
+      nixpkgs,
+      flake-utils,
+      treefmt-nix,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         # Current Version of Morph
         # TODO: this sucks...
@@ -43,15 +53,20 @@
             let
               # some treefmt formatters are not supported in pre-commit-hooks we
               # filter them out for now.
-              toFilter = [ "yamlfmt" ];
+              toFilter = [
+                "yamlfmt"
+                "nixfmt"
+              ];
               filterFn = n: _v: (!builtins.elem n toFilter);
-              treefmtFormatters =
-                pkgs.lib.mapAttrs (_n: v: { inherit (v) enable; })
-                  (pkgs.lib.filterAttrs filterFn (import ./treefmt.nix).programs);
+              treefmtFormatters = pkgs.lib.mapAttrs (_n: v: { inherit (v) enable; }) (
+                pkgs.lib.filterAttrs filterFn (import ./treefmt.nix).programs
+              );
             in
             pre-commit-hooks.lib.${system}.run {
               src = ./.;
-              hooks = treefmtFormatters;
+              hooks = treefmtFormatters // {
+                nixfmt-rfc-style.enable = true;
+              };
             };
         };
 
@@ -81,7 +96,10 @@
               cp -v ./data/*.nix $lib
             '';
 
-            outputs = [ "out" "lib" ];
+            outputs = [
+              "out"
+              "lib"
+            ];
 
             meta = {
               homepage = "https://github.com/DBCDK/morph";
@@ -90,5 +108,6 @@
             };
           };
         };
-      });
+      }
+    );
 }

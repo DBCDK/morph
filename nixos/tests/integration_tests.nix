@@ -1,6 +1,5 @@
 { nixosTest, packages, ... }:
 
-
 nixosTest {
   name = "morph-deployment-test";
   nodes =
@@ -19,9 +18,7 @@ nixosTest {
         inherit services boot;
         environment.systemPackages = [ packages.morph ];
       };
-      target = _: {
-        inherit services boot;
-      };
+      target = _: { inherit services boot; };
     };
   testScript = ''
     start_all()

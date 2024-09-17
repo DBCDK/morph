@@ -1,4 +1,8 @@
-{ nixpkgs ? import ./nixpkgs.nix, pkgs ? import nixpkgs { }, version ? "dev" }:
+{
+  nixpkgs ? import ./nixpkgs.nix,
+  pkgs ? import nixpkgs { },
+  version ? "dev",
+}:
 
 pkgs.buildGoModule rec {
   name = "morph-unstable-${version}";
@@ -6,8 +10,10 @@ pkgs.buildGoModule rec {
 
   src = pkgs.nix-gitignore.gitignoreSource [ ] ./.;
 
-  ldflags =
-    [ "-X main.version=${version}" "-X main.assetRoot=${placeholder "lib"}" ];
+  ldflags = [
+    "-X main.version=${version}"
+    "-X main.assetRoot=${placeholder "lib"}"
+  ];
 
   vendorHash = "sha256-zQlMtbXgrH83zrcIoOuFhb2tYCeQ1pz4UQUvRIsLMCE==";
 
@@ -16,7 +22,10 @@ pkgs.buildGoModule rec {
     cp -v ./data/*.nix $lib
   '';
 
-  outputs = [ "out" "lib" ];
+  outputs = [
+    "out"
+    "lib"
+  ];
 
   meta = {
     homepage = "https://github.com/DBCDK/morph";

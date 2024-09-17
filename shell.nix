@@ -1,5 +1,10 @@
-{ nixpkgs ? import ./nixpkgs.nix, pkgs ? import nixpkgs { } }:
+{
+  nixpkgs ? import ./nixpkgs.nix,
+  pkgs ? import nixpkgs { },
+}:
 
-let morph = pkgs.callPackage ./default.nix { };
+let
+  morph = pkgs.callPackage ./default.nix { };
 
-in pkgs.mkShell { inputsFrom = [ morph ]; }
+in
+pkgs.mkShell { inputsFrom = [ morph ]; }
