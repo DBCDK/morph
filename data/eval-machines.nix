@@ -7,6 +7,7 @@ let
   lib = network.network.lib or nwPkgs.lib or (import <nixpkgs/lib>);
   evalConfig =
     network.network.evalConfig or ((nwPkgs.path or <nixpkgs>) + "/nixos/lib/eval-config.nix");
+  specialArgs = network.network.specialArgs or { };
   runCommand = network.network.runCommand or nwPkgs.runCommand or (import <nixpkgs> { }).runCommand;
 in
 with lib;
@@ -77,6 +78,7 @@ rec {
     map (machineName: {
       name = machineName;
       value = import evalConfig {
+        inherit specialArgs;
         # Force decide system in module system
         system = null;
         modules = modules {
@@ -93,6 +95,7 @@ rec {
     map (machineName: {
       name = machineName;
       value = import evalConfig {
+        inherit specialArgs;
         # Force decide system in module system
         system = null;
         modules = modules {

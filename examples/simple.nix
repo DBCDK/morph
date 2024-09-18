@@ -4,6 +4,9 @@ in
 {
   network = {
     inherit pkgs;
+    specialArgs = {
+      systemdBoot = true;
+    };
     description = "simple hosts";
     ordering = {
       tags = [
@@ -13,25 +16,27 @@ in
     };
   };
 
-  "web01" = _: {
-    deployment.tags = [ "web" ];
+  "web01" =
+    { systemdBoot, ... }:
+    {
+      deployment.tags = [ "web" ];
 
-    boot.loader.systemd-boot.enable = true;
-    boot.loader.efi.canTouchEfiVariables = true;
+      boot.loader.systemd-boot.enable = systemdBoot;
+      boot.loader.efi.canTouchEfiVariables = true;
 
-    services.nginx.enable = true;
+      services.nginx.enable = true;
 
-    fileSystems = {
-      "/" = {
-        label = "nixos";
-        fsType = "ext4";
-      };
-      "/boot" = {
-        label = "boot";
-        fsType = "vfat";
+      fileSystems = {
+        "/" = {
+          label = "nixos";
+          fsType = "ext4";
+        };
+        "/boot" = {
+          label = "boot";
+          fsType = "vfat";
+        };
       };
     };
-  };
 
   "db01" = _: {
     deployment.tags = [ "db" ];
