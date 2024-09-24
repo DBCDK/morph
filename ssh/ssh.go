@@ -5,8 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/DBCDK/morph/utils"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 	"os/exec"
@@ -14,6 +12,9 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/DBCDK/morph/utils"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Context interface {
@@ -156,20 +157,22 @@ func (sshCtx *SSHContext) SudoCmdContext(ctx context.Context, host Host, parts .
 
 	cmd, cmdArgs := sshCtx.sshArgs(host, nil)
 
-	// normalize sudo
-	if parts[0] == "sudo" {
-		parts = parts[1:]
-	}
-	cmdArgs = append(cmdArgs, "sudo")
+	if host.GetTargetUser() != "root" {
+		// normalize sudo
+		if parts[0] == "sudo" {
+			parts = parts[1:]
+		}
+		cmdArgs = append(cmdArgs, "sudo")
 
-	if sshCtx.sudoPassword != "" {
-		cmdArgs = append(cmdArgs, "-S")
-	} else {
-		// no password supplied; request non-interactive sudo, which will fail with an error if a password was required
-		cmdArgs = append(cmdArgs, "-n")
-	}
+		if sshCtx.sudoPassword != "" {
+			cmdArgs = append(cmdArgs, "-S")
+		} else {
+			// no password supplied; request non-interactive sudo, which will fail with an error if a password was required
+			cmdArgs = append(cmdArgs, "-n")
+		}
 
-	cmdArgs = append(cmdArgs, "-p", "''", "-k", "--")
+		cmdArgs = append(cmdArgs, "-p", "''", "-k", "--")
+	}
 	cmdArgs = append(cmdArgs, parts...)
 
 	command := exec.CommandContext(ctx, cmd, cmdArgs...)
