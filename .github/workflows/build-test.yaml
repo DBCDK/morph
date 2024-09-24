@@ -1,0 +1,43 @@
+name: "Build Example Configs"
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    branches:
+      - "master"
+jobs:
+  linux:
+    name: Linux ${{ matrix.systems }} ${{ matrix.targets }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        targets: [healthchecks.nix, secrets.nix, simple.nix]
+        os: [ubuntu-latest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Morph Build ${{ Matrix.targets }}
+        run: nix run . -- build examples/${{ matrix.targets }}
+
+# Doesn't work :(
+#  macos:
+#    name: MacOS ${{ matrix.systems }} ${{ matrix.targets }}
+#    runs-on: ${{ matrix.os }}
+#    strategy:
+#      matrix:
+#        targets: [healthchecks.nix, secrets.nix, simple.nix]
+#        os: [macos-latest]
+#    steps:
+#      - name: Checkout repository
+#        uses: actions/checkout@v4
+#      - name: Install Nix
+#        uses: DeterminateSystems/nix-installer-action@main
+#      - name: Setup Nix cache
+#        uses: DeterminateSystems/magic-nix-cache-action@main
+#      - name: Morph Build ${{ Matrix.targets }}
+#        run: nix run . -- build examples/${{ matrix.targets }}
