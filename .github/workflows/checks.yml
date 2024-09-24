@@ -1,0 +1,47 @@
+name: "Flake Checks"
+on:
+  push:
+    branches:
+      - "master"
+  pull_request:
+    branches:
+      - "master"
+jobs:
+  linux:
+    name: Linux ${{ matrix.systems }} ${{ matrix.checks }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        checks: [build, formatting, pre-commit-check, vm_integration_tests]
+        os: [ubuntu-latest]
+        systems: ["x86_64-linux"]
+        # In a better world ; _ ;
+        # systems: ["x86_64-linux", "aarch64-linux","x86_64-darwin", "aarch64-darwin"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Nix Flake Check
+        run: nix build ./#checks.${{ matrix.systems }}.${{ matrix.checks }} -L
+  macos:
+    name: MacOS ${{ matrix.systems }} ${{ matrix.checks }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        checks: [build, formatting, pre-commit-check]
+        # TODO: this *should* work, but it doesn't (surely it's Sequoia's fault)
+        # checks: [build, formatting, pre-commit-check, vm_integration_tests]
+        os: [macos-latest]
+        systems: ["aarch64-darwin"]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Nix Flake Check
+        run: nix build ./#checks.${{ matrix.systems }}.${{ matrix.checks }} -L
