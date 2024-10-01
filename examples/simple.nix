@@ -4,7 +4,7 @@ in
 {
   network = {
     inherit pkgs;
-    specialArgs = {
+    extraSpecialArgs = {
       systemdBoot = true;
     };
     description = "simple hosts";
