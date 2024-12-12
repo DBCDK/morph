@@ -89,7 +89,7 @@
               "-X main.assetRoot=${placeholder "lib"}"
             ];
 
-            vendorHash = "sha256-zQlMtbXgrH83zrcIoOuFhb2tYCeQ1pz4UQUvRIsLMCE==";
+            vendorHash = "sha256-Mi0SdvmYao6rLt8+bFcUv2AjHkJTLP85zGka1/cCPzQ=";
 
             postInstall = ''
               mkdir -p $lib
