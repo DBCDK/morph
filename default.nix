@@ -30,5 +30,6 @@ pkgs.buildGoModule rec {
   meta = {
     homepage = "https://github.com/DBCDK/morph";
     description = "Morph is a NixOS host manager written in Golang.";
+    mainProgram = "morph";
   };
 }
