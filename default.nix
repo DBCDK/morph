@@ -15,11 +15,16 @@ pkgs.buildGoModule rec {
     "-X main.assetRoot=${placeholder "lib"}"
   ];
 
+  nativeBuildInputs = [ pkgs.installShellFiles ];
+
   vendorHash = "sha256-Mi0SdvmYao6rLt8+bFcUv2AjHkJTLP85zGka1/cCPzQ=";
 
   postInstall = ''
     mkdir -p $lib
     cp -v ./data/*.nix $lib
+    installShellCompletion --cmd morph \
+      --bash <($out/bin/morph --completion-script-bash) \
+      --zsh <($out/bin/morph --completion-script-zsh)
   '';
 
   outputs = [
