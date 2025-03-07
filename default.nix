@@ -1,10 +1,15 @@
+# gomod2nix: https://github.com/nix-community/gomod2nix/blob/master/docs/getting-started.md
 {
-  nixpkgs ? import ./nixpkgs.nix,
-  pkgs ? import nixpkgs { },
+  pkgs ? (
+    let
+      sources = import ./sources.nix;
+    in
+    import sources.nixpkgs { overlays = [ (import "${sources.gomod2nix}/overlay.nix") ]; }
+  ),
   version ? "dev",
 }:
 
-pkgs.buildGoModule rec {
+pkgs.buildGoApplication rec {
   name = "morph-unstable-${version}";
   inherit version;
 
@@ -15,7 +20,7 @@ pkgs.buildGoModule rec {
     "-X main.assetRoot=${placeholder "lib"}"
   ];
 
-  vendorHash = "sha256-Mi0SdvmYao6rLt8+bFcUv2AjHkJTLP85zGka1/cCPzQ=";
+  modules = ./gomod2nix.toml;
 
   postInstall = ''
     mkdir -p $lib
