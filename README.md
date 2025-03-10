@@ -24,6 +24,17 @@ Pre-built binaries are not provided, since we install morph through an overlay.
 The easiest way to get morph up and running is to fork this repository and run `nix-build`, which should result in a store path containing the morph binary.
 Consider checking out a specific tag, or at least pin the version of morph you're using somehow.
 
+### Install via flake
+
+If you have flakes enabled, you can also install using one of the following commands:
+
+```
+# install a specific release or commit
+nix profile install github:DBCDK/morph/v1.8.0#morph
+
+# install the latest commit
+nix profile install github:DBCDK/morph#morph
+```
 
 ## Using morph
 
