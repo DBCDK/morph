@@ -64,7 +64,6 @@ type NixBuildInvocationArgs struct {
 	Attr            string
 	DeploymentPath  string
 	Names           []string
-	NixArgs         []string
 	NixBuildTargets string
 	NixConfig       map[string]string
 	NixContext      NixContext
@@ -81,10 +80,6 @@ func (nArgs *NixBuildInvocationArgs) ToNixBuildArgs() []string {
 	}
 
 	args = append(args, mkOptions(nArgs.NixConfig)...)
-
-	if len(nArgs.NixArgs) > 0 {
-		args = append(args, nArgs.NixArgs...)
-	}
 
 	if nArgs.NixContext.ShowTrace {
 		args = append(args, "--show-trace")
@@ -343,7 +338,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 	return deployment, nil
 }
 
-func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArgs []string, nixBuildTargets string) (resultPath string, err error) {
+func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixBuildTargets string) (resultPath string, err error) {
 	tmpdir, err := ioutil.TempDir("", "morph-")
 	if err != nil {
 		return "", err
@@ -384,7 +379,6 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixArg
 		Attr:            "machines",
 		DeploymentPath:  deploymentPath,
 		Names:           hostNames,
-		NixArgs:         nixArgs,
 		NixBuildTargets: nixBuildTargets,
 		NixConfig:       hosts[0].NixConfig,
 		NixContext:      *ctx,
@@ -456,10 +450,6 @@ func mkOptions(nixConfig map[string]string) []string {
 
 func GetNixSystemPath(host Host, resultPath string) (string, error) {
 	return os.Readlink(filepath.Join(resultPath, host.Name))
-}
-
-func GetNixSystemDerivation(host Host, resultPath string) (string, error) {
-	return os.Readlink(filepath.Join(resultPath, host.Name+".drv"))
 }
 
 func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {

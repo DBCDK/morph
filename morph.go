@@ -36,7 +36,6 @@ var (
 	timeout             int
 	askForSudoPasswd    bool
 	passCmd             string
-	nixBuildArg         []string
 	nixBuildTarget      string
 	nixBuildTargetFile  string
 	build               = buildCmd(app.Command("build", "Evaluate and build deployment configuration to the local Nix store"))
@@ -113,11 +112,6 @@ func selectorFlags(cmd *kingpin.CmdClause) {
 		StringVar(&orderingTags)
 }
 
-func nixBuildArgFlag(cmd *kingpin.CmdClause) {
-	cmd.Flag("build-arg", "Extra argument to pass on to nix-build command. **DEPRECATED**").
-		StringsVar(&nixBuildArg)
-}
-
 func nixBuildTargetFlag(cmd *kingpin.CmdClause) {
 	cmd.Flag("target", "A Nix lambda defining the build target to use instead of the default").
 		StringVar(&nixBuildTarget)
@@ -166,7 +160,6 @@ func evalCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 func buildCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	showTraceFlag(cmd)
-	nixBuildArgFlag(cmd)
 	nixBuildTargetFlag(cmd)
 	nixBuildTargetFileFlag(cmd)
 	deploymentArg(cmd)
@@ -198,7 +191,6 @@ func executeCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 func deployCmd(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	selectorFlags(cmd)
 	showTraceFlag(cmd)
-	nixBuildArgFlag(cmd)
 	deploymentArg(cmd)
 	timeoutFlag(cmd)
 	askForSudoPasswdFlag(cmd)
@@ -260,11 +252,6 @@ func setup() {
 func main() {
 
 	clause := kingpin.MustParse(app.Parse(os.Args[1:]))
-
-	//TODO: Remove deprecation warning when removing --build-arg flag
-	if len(nixBuildArg) > 0 {
-		fmt.Fprintln(os.Stderr, "Deprecation: The --build-arg flag will be removed in a future release.")
-	}
 
 	defer utils.RunFinalizers()
 	setup()
@@ -663,7 +650,7 @@ func buildHosts(hosts []nix.Host) (resultPath string, err error) {
 	}
 
 	ctx := getNixContext()
-	resultPath, err = ctx.BuildMachines(deploymentPath, hosts, nixBuildArg, nixBuildTargets)
+	resultPath, err = ctx.BuildMachines(deploymentPath, hosts, nixBuildTargets)
 
 	if err != nil {
 		return
