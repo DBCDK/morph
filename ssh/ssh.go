@@ -5,8 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/DBCDK/morph/utils"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 	"os/exec"
@@ -14,6 +12,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/crypto/ssh/terminal"
+
+	"github.com/DBCDK/morph/common"
+	"github.com/DBCDK/morph/utils"
 )
 
 type Context interface {
@@ -46,6 +49,17 @@ type SSHContext struct {
 	IdentityFile           string
 	ConfigFile             string
 	SkipHostKeyCheck       bool
+}
+
+func CreateSSHContext(opts *common.MorphOptions) *SSHContext {
+	return &SSHContext{
+		AskForSudoPassword:     opts.AskForSudoPasswd,
+		GetSudoPasswordCommand: opts.PassCmd,
+		IdentityFile:           os.Getenv("SSH_IDENTITY_FILE"),
+		DefaultUsername:        os.Getenv("SSH_USER"),
+		SkipHostKeyCheck:       os.Getenv("SSH_SKIP_HOST_KEY_CHECK") != "",
+		ConfigFile:             os.Getenv("SSH_CONFIG_FILE"),
+	}
 }
 
 type FileTransfer struct {

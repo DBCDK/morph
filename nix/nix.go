@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/DBCDK/morph/common"
 	"github.com/DBCDK/morph/healthchecks"
 	"github.com/DBCDK/morph/secrets"
 	"github.com/DBCDK/morph/ssh"
@@ -517,4 +518,34 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	}
 
 	return nil
+}
+
+func GetNixContext(opts *common.MorphOptions) *NixContext {
+	evalCmd := os.Getenv("MORPH_NIX_EVAL_CMD")
+	buildCmd := os.Getenv("MORPH_NIX_BUILD_CMD")
+	shellCmd := os.Getenv("MORPH_NIX_SHELL_CMD")
+	evalMachines := os.Getenv("MORPH_NIX_EVAL_MACHINES")
+
+	if evalCmd == "" {
+		evalCmd = "nix-instantiate"
+	}
+	if buildCmd == "" {
+		buildCmd = "nix-build"
+	}
+	if shellCmd == "" {
+		shellCmd = "nix-shell"
+	}
+	if evalMachines == "" {
+		evalMachines = filepath.Join(opts.AssetRoot, "eval-machines.nix")
+	}
+
+	return &NixContext{
+		EvalCmd:         evalCmd,
+		BuildCmd:        buildCmd,
+		ShellCmd:        shellCmd,
+		EvalMachines:    evalMachines,
+		ShowTrace:       opts.ShowTrace,
+		KeepGCRoot:      *opts.KeepGCRoot,
+		AllowBuildShell: *opts.AllowBuildShell,
+	}
 }
