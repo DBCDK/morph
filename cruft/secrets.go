@@ -67,7 +67,7 @@ func ExecUploadSecrets(opts *common.MorphOptions, hosts []nix.Host, phase *strin
 		}
 		singleHostInList := []nix.Host{host}
 
-		err := secretsUpload(opts, sshContext, singleHostInList, phase)
+		err := secretsUpload(opts, singleHostInList, phase)
 		if err != nil {
 			return err
 		}
@@ -85,7 +85,9 @@ func ExecUploadSecrets(opts *common.MorphOptions, hosts []nix.Host, phase *strin
 	return nil
 }
 
-func secretsUpload(opts *common.MorphOptions, ctx ssh.Context, filteredHosts []nix.Host, phase *string) error {
+func secretsUpload(opts *common.MorphOptions, filteredHosts []nix.Host, phase *string) error {
+	sshContext := ssh.CreateSSHContext(opts)
+
 	// upload secrets
 	// relative paths are resolved relative to the deployment file (!)
 	deploymentDir := filepath.Dir(opts.Deployment)
@@ -104,7 +106,7 @@ func secretsUpload(opts *common.MorphOptions, ctx ssh.Context, filteredHosts []n
 				return err
 			}
 
-			secretErr := secrets.UploadSecret(ctx, &host, secret, deploymentDir)
+			secretErr := secrets.UploadSecret(sshContext, &host, secret, deploymentDir)
 			fmt.Fprintf(os.Stderr, "\t* %s (%d bytes).. ", secretName, secretSize)
 			if secretErr != nil {
 				if secretErr.Fatal {
@@ -126,7 +128,7 @@ func secretsUpload(opts *common.MorphOptions, ctx ssh.Context, filteredHosts []n
 		for _, action := range postUploadActions {
 			fmt.Fprintf(os.Stderr, "\t- executing post-upload command: "+strings.Join(action, " ")+"\n")
 			// Errors from secret actions will be printed on screen, but we won't stop the flow if they fail
-			ctx.CmdInteractive(&host, opts.Timeout, action...)
+			sshContext.CmdInteractive(&host, opts.Timeout, action...)
 		}
 	}
 

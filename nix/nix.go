@@ -219,13 +219,13 @@ func (host *Host) Reboot(sshContext *ssh.SSHContext) error {
 	return nil
 }
 
-func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string, err error) {
+func (nixContext *NixContext) GetBuildShell(deploymentPath string) (buildShell *string, err error) {
 
 	nixEvalInvocationArgs := NixEvalInvocationArgs{
 		AsJSON:         true,
 		Attr:           "info.buildShell",
 		DeploymentPath: deploymentPath,
-		NixContext:     *ctx,
+		NixContext:     *nixContext,
 		Strict:         true,
 	}
 
@@ -234,7 +234,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 		return buildShell, err
 	}
 
-	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+	cmd := exec.Command(nixContext.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -250,7 +250,7 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `%s ..`: %s", ctx.EvalCmd, err.Error(),
+			"Error while running `%s ..`: %s", nixContext.EvalCmd, err.Error(),
 		)
 		return buildShell, errors.New(errorMessage)
 	}
@@ -263,14 +263,14 @@ func (ctx *NixContext) GetBuildShell(deploymentPath string) (buildShell *string,
 	return buildShell, nil
 }
 
-func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, error) {
+func (nixContext *NixContext) EvalHosts(deploymentPath string, attr string) (string, error) {
 	attribute := "nodes." + attr
 
 	nixEvalInvocationArgs := NixEvalInvocationArgs{
 		AsJSON:         false,
 		Attr:           attribute,
 		DeploymentPath: deploymentPath,
-		NixContext:     *ctx,
+		NixContext:     *nixContext,
 		Strict:         true,
 	}
 
@@ -279,7 +279,7 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, er
 		return "", err
 	}
 
-	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+	cmd := exec.Command(nixContext.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	utils.AddFinalizer(func() {
 		if (cmd.ProcessState == nil || !cmd.ProcessState.Exited()) && cmd.Process != nil {
@@ -295,13 +295,13 @@ func (ctx *NixContext) EvalHosts(deploymentPath string, attr string) (string, er
 	return deploymentPath, err
 }
 
-func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {
+func (nixContext *NixContext) GetMachines(deploymentPath string) (deployment Deployment, err error) {
 
 	nixEvalInvocationArgs := NixEvalInvocationArgs{
 		AsJSON:         true,
 		Attr:           "info.deployment",
 		DeploymentPath: deploymentPath,
-		NixContext:     *ctx,
+		NixContext:     *nixContext,
 		Strict:         true,
 	}
 
@@ -310,7 +310,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 		return deployment, err
 	}
 
-	cmd := exec.Command(ctx.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
+	cmd := exec.Command(nixContext.EvalCmd, nixEvalInvocationArgs.ToNixInstantiateArgs()...)
 
 	var stdout bytes.Buffer
 	cmd.Stdout = &stdout
@@ -326,7 +326,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 	err = cmd.Run()
 	if err != nil {
 		errorMessage := fmt.Sprintf(
-			"Error while running `%s ..`: %s", ctx.EvalCmd, err.Error(),
+			"Error while running `%s ..`: %s", nixContext.EvalCmd, err.Error(),
 		)
 		return deployment, errors.New(errorMessage)
 	}
@@ -339,7 +339,7 @@ func (ctx *NixContext) GetMachines(deploymentPath string) (deployment Deployment
 	return deployment, nil
 }
 
-func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixBuildTargets string) (resultPath string, err error) {
+func (nixContext *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixBuildTargets string) (resultPath string, err error) {
 	tmpdir, err := ioutil.TempDir("", "morph-")
 	if err != nil {
 		return "", err
@@ -354,18 +354,18 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixBui
 	}
 
 	resultLinkPath := filepath.Join(path.Dir(deploymentPath), ".gcroots", path.Base(deploymentPath))
-	if ctx.KeepGCRoot {
+	if nixContext.KeepGCRoot {
 		if err = os.MkdirAll(path.Dir(resultLinkPath), 0755); err != nil {
-			ctx.KeepGCRoot = false
+			nixContext.KeepGCRoot = false
 			fmt.Fprintf(os.Stderr, "Unable to create GC root, skipping: %s", err)
 		}
 	}
-	if !ctx.KeepGCRoot {
+	if !nixContext.KeepGCRoot {
 		// create tmp dir for result link
 		resultLinkPath = filepath.Join(tmpdir, "result")
 	}
 
-	buildShell, err := ctx.GetBuildShell(deploymentPath)
+	buildShell, err := nixContext.GetBuildShell(deploymentPath)
 
 	if err != nil {
 		errorMessage := fmt.Sprintf(
@@ -382,7 +382,7 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixBui
 		Names:           hostNames,
 		NixBuildTargets: nixBuildTargets,
 		NixConfig:       hosts[0].NixConfig,
-		NixContext:      *ctx,
+		NixContext:      *nixContext,
 		ResultLinkPath:  resultLinkPath,
 	}
 
@@ -397,12 +397,12 @@ func (ctx *NixContext) BuildMachines(deploymentPath string, hosts []Host, nixBui
 	}
 
 	var cmd *exec.Cmd
-	if ctx.AllowBuildShell && buildShell != nil {
+	if nixContext.AllowBuildShell && buildShell != nil {
 
-		shellArgs := strings.Join(append([]string{ctx.BuildCmd}, NixBuildInvocationArgs.ToNixBuildArgs()...), " ")
-		cmd = exec.Command(ctx.ShellCmd, *buildShell, "--pure", "--run", shellArgs)
+		shellArgs := strings.Join(append([]string{nixContext.BuildCmd}, NixBuildInvocationArgs.ToNixBuildArgs()...), " ")
+		cmd = exec.Command(nixContext.ShellCmd, *buildShell, "--pure", "--run", shellArgs)
 	} else {
-		cmd = exec.Command(ctx.BuildCmd, NixBuildInvocationArgs.ToNixBuildArgs()...)
+		cmd = exec.Command(nixContext.BuildCmd, NixBuildInvocationArgs.ToNixBuildArgs()...)
 
 	}
 
@@ -464,7 +464,7 @@ func GetPathsToPush(host Host, resultPath string) (paths []string, err error) {
 	return paths, nil
 }
 
-func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
+func Push(sshContext *ssh.SSHContext, host Host, paths ...string) (err error) {
 	utils.ValidateEnvironment("ssh")
 
 	var userArg = ""
@@ -473,20 +473,20 @@ func Push(ctx *ssh.SSHContext, host Host, paths ...string) (err error) {
 	var env = os.Environ()
 	if host.TargetUser != "" {
 		userArg = host.TargetUser + "@"
-	} else if ctx.DefaultUsername != "" {
-		userArg = ctx.DefaultUsername + "@"
+	} else if sshContext.DefaultUsername != "" {
+		userArg = sshContext.DefaultUsername + "@"
 	}
-	if ctx.IdentityFile != "" {
-		keyArg = "?ssh-key=" + ctx.IdentityFile
+	if sshContext.IdentityFile != "" {
+		keyArg = "?ssh-key=" + sshContext.IdentityFile
 	}
-	if ctx.SkipHostKeyCheck {
+	if sshContext.SkipHostKeyCheck {
 		sshOpts = append(sshOpts, fmt.Sprintf("%s", "-o StrictHostkeyChecking=No -o UserKnownHostsFile=/dev/null"))
 	}
 	if host.TargetPort != 0 {
 		sshOpts = append(sshOpts, fmt.Sprintf("-p %d", host.TargetPort))
 	}
-	if ctx.ConfigFile != "" {
-		sshOpts = append(sshOpts, fmt.Sprintf("-F %s", ctx.ConfigFile))
+	if sshContext.ConfigFile != "" {
+		sshOpts = append(sshOpts, fmt.Sprintf("-F %s", sshContext.ConfigFile))
 	}
 	if len(sshOpts) > 0 {
 		env = append(env, fmt.Sprintf("NIX_SSHOPTS=%s", strings.Join(sshOpts, " ")))

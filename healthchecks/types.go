@@ -5,11 +5,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/DBCDK/morph/ssh"
-	"github.com/DBCDK/morph/utils"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/DBCDK/morph/ssh"
+	"github.com/DBCDK/morph/utils"
 )
 
 type Host interface {

@@ -89,7 +89,7 @@ func ExecDeploy(opts *common.MorphOptions, hosts []nix.Host) (string, error) {
 		}
 
 		if doActivate {
-			err = activateConfiguration(opts, sshContext, singleHostInList, resultPath)
+			err = activateConfiguration(opts, singleHostInList, resultPath)
 			if err != nil {
 				return "", err
 			}
@@ -176,17 +176,18 @@ func ExecHealthCheck(opts *common.MorphOptions, hosts []nix.Host) error {
 }
 
 func ExecPush(opts *common.MorphOptions, hosts []nix.Host) (string, error) {
+	sshContext := ssh.CreateSSHContext(opts)
+
 	resultPath, err := ExecBuild(opts, hosts)
 	if err != nil {
 		return "", err
 	}
 
 	fmt.Fprintln(os.Stderr)
-	return resultPath, pushPaths(ssh.CreateSSHContext(opts), hosts, resultPath)
+	return resultPath, pushPaths(sshContext, hosts, resultPath)
 }
 
 func GetHosts(opts *common.MorphOptions) (hosts []nix.Host, err error) {
-
 	deploymentFile, err := os.Open(opts.Deployment)
 	if err != nil {
 		return hosts, err
@@ -197,8 +198,8 @@ func GetHosts(opts *common.MorphOptions) (hosts []nix.Host, err error) {
 		return hosts, err
 	}
 
-	ctx := nix.GetNixContext(opts)
-	deployment, err := ctx.GetMachines(deploymentAbsPath)
+	nixContext := nix.GetNixContext(opts)
+	deployment, err := nixContext.GetMachines(deploymentAbsPath)
 	if err != nil {
 		return hosts, err
 	}
@@ -233,7 +234,9 @@ func GetHosts(opts *common.MorphOptions) (hosts []nix.Host, err error) {
 	return filteredHosts, nil
 }
 
-func activateConfiguration(opts *common.MorphOptions, ctx ssh.Context, filteredHosts []nix.Host, resultPath string) error {
+func activateConfiguration(opts *common.MorphOptions, filteredHosts []nix.Host, resultPath string) error {
+	sshContext := ssh.CreateSSHContext(opts)
+
 	fmt.Fprintln(os.Stderr, "Executing '"+opts.DeploySwitchAction+"' on matched hosts:")
 	fmt.Fprintln(os.Stderr)
 	for _, host := range filteredHosts {
@@ -245,7 +248,7 @@ func activateConfiguration(opts *common.MorphOptions, ctx ssh.Context, filteredH
 			return err
 		}
 
-		err = ctx.ActivateConfiguration(&host, configuration, opts.DeploySwitchAction)
+		err = sshContext.ActivateConfiguration(&host, configuration, opts.DeploySwitchAction)
 		if err != nil {
 			return err
 		}
@@ -276,8 +279,8 @@ func buildHosts(opts *common.MorphOptions, hosts []nix.Host) (resultPath string,
 		nixBuildTargets = fmt.Sprintf("{ \"out\" = %s; }", opts.NixBuildTarget)
 	}
 
-	ctx := nix.GetNixContext(opts)
-	resultPath, err = ctx.BuildMachines(deploymentPath, hosts, nixBuildTargets)
+	nixContext := nix.GetNixContext(opts)
+	resultPath, err = nixContext.BuildMachines(deploymentPath, hosts, nixBuildTargets)
 
 	if err != nil {
 		return

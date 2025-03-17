@@ -1,10 +1,11 @@
 package secrets
 
 import (
-	"github.com/DBCDK/morph/ssh"
-	"github.com/DBCDK/morph/utils"
 	"os"
 	"path/filepath"
+
+	"github.com/DBCDK/morph/ssh"
+	"github.com/DBCDK/morph/utils"
 )
 
 type SecretError struct {
@@ -44,41 +45,41 @@ func GetSecretSize(secret Secret, deploymentWD string) (size int64, err error) {
 	return fStats.Size(), nil
 }
 
-func UploadSecret(ctx ssh.Context, host ssh.Host, secret Secret, deploymentWD string) *SecretError {
+func UploadSecret(sshContext *ssh.SSHContext, host ssh.Host, secret Secret, deploymentWD string) *SecretError {
 	var partialErr *SecretError
 
-	err := ctx.WaitForMountPoints(host, secret.Destination)
+	err := sshContext.WaitForMountPoints(host, secret.Destination)
 	if err != nil {
 		return wrap(err)
 	}
 
-	tempPath, err := ctx.MakeTempFile(host)
+	tempPath, err := sshContext.MakeTempFile(host)
 	if err != nil {
 		return wrap(err)
 	}
 
 	if secret.MkDirs {
-		if err := ctx.MakeDirs(host, filepath.Dir(secret.Destination), true, 0755); err != nil {
+		if err := sshContext.MakeDirs(host, filepath.Dir(secret.Destination), true, 0755); err != nil {
 			return wrap(err)
 		}
 	}
 
-	err = ctx.UploadFile(host, utils.GetAbsPathRelativeTo(secret.Source, deploymentWD), tempPath)
+	err = sshContext.UploadFile(host, utils.GetAbsPathRelativeTo(secret.Source, deploymentWD), tempPath)
 	if err != nil {
 		return wrap(err)
 	}
 
-	err = ctx.MoveFile(host, tempPath, secret.Destination)
+	err = sshContext.MoveFile(host, tempPath, secret.Destination)
 	if err != nil {
 		return wrap(err)
 	}
 
-	err = ctx.SetOwner(host, secret.Destination, secret.Owner.User, secret.Owner.Group)
+	err = sshContext.SetOwner(host, secret.Destination, secret.Owner.User, secret.Owner.Group)
 	if err != nil {
 		partialErr = wrapNonFatal(err)
 	}
 
-	err = ctx.SetPermissions(host, secret.Destination, secret.Permissions)
+	err = sshContext.SetPermissions(host, secret.Destination, secret.Permissions)
 	if err != nil {
 		partialErr = wrapNonFatal(err)
 	}
