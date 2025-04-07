@@ -230,7 +230,7 @@ Is equivalent to this:
 `deployment.targetUser` makes morph connect to the host as a different SSH user. (default: `SSH_USER` environment variable, ssh configuration, or your local username)
 
 Example usage of `nixConfig` and deployment module options:
-```
+```nix
 network = {
     nixConfig = {
         "extra-sandbox-paths" = "/foo/bar";
@@ -252,7 +252,7 @@ machine2 = { ... }: {
 **mutually recursive configurations**
 Each host's configuration has access to a `nodes` argument, which contains the compiled configurations of all hosts.
 
-```
+```nix
 machine1 = { nodes, ... }: {
     hostnames.machine2 = 
         (builtins.head nodes.machine2.networking.interfaces.foo.ipv4.addresses).address;
