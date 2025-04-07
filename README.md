@@ -195,6 +195,11 @@ By passing `--allow-build-shell` and setting `network.buildShell` to a nix-shell
 
 `substituteOnDestination` Sets the `--substitute-on-destination` flag on nix copy, allowing for the deployment target to use substitutes. See `nix copy --help`. (default: false)
 
+`deployment.targetHost` makes morph connect to the host on a different hostname. (default: the attribute name)
+
+`deployment.targetPort` makes morph connect to the host on a different SSH port. (default: ssh's default, 22 unless overridden)
+
+`deployment.targetUser` makes morph connect to the host as a different SSH user. (default: `SSH_USER` environment variable, ssh configuration, or your local username)
 
 Example usage of `nixConfig` and deployment module options:
 ```
@@ -210,6 +215,9 @@ machine1 = { ... }: {
 
 machine2 = { ... }: {
     deployment.substituteOnDestination = true;
+    deployment.targetHost = "10.0.0.5";
+    deployment.targetPort = 2222;
+    deployment.targetUser = "admin";
 };
 ```
 
