@@ -187,6 +187,34 @@ The default is an empty set, meaning that the nix configuration is inherited fro
 **network.buildShell**
 By passing `--allow-build-shell` and setting `network.buildShell` to a nix-shell compatible derivation (eg. `pkgs.mkShell ...`), it's possible to make morph execute builds from within the defined shell. This makes it possible to have arbitrary dependencies available during the build, say for use with nix build hooks. Be aware that the shell can potentially execute any command on the local system.
 
+**defaults**
+The special `defaults` pseudo-host will be merged into all other hosts, rather than deployed on its own.
+
+For example, this:
+
+```nix
+{
+  defaults = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.curl ];
+  };
+  machine1 = {};
+  machine2 = {};
+}
+```
+
+Is equivalent to this:
+
+```nix
+{
+  machine1 = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.curl ];
+  };
+  machine2 = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.curl ];
+  };
+}
+```
+
 **special deployment options:**
 
 (per-host granularity)
