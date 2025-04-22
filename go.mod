@@ -1,6 +1,6 @@
 module github.com/DBCDK/morph
 
-go 1.17
+go 1.23
 
 require (
 	github.com/DBCDK/kingpin v0.0.0-20180916151106-8554767bc912
