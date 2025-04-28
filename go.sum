@@ -1,5 +1,7 @@
 github.com/DBCDK/kingpin v0.0.0-20180916151106-8554767bc912 h1:4byT/r1McJ7nD3QKkPD5nhXbg02ynJGEExBh4AOgIck=
 github.com/DBCDK/kingpin v0.0.0-20180916151106-8554767bc912/go.mod h1:bgEnLHzC+HvAA+6M6MS+GKXRdn9q6OOywZEb7pMYjKU=
+github.com/DBCDK/kingpin v2.2.6+incompatible h1:T4yaG6VZFCtsp+2CzE7UFGkgoMECDNGaES90Uu3EbaQ=
+github.com/DBCDK/kingpin v2.2.6+incompatible/go.mod h1:bgEnLHzC+HvAA+6M6MS+GKXRdn9q6OOywZEb7pMYjKU=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 h1:JYp7IbQjafoB+tBA3gMyHYHrpOtNuDiK/uB5uXxq5wM=
 github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751/go.mod h1:LOuyumcjzFXgccqObfd/Ljyb9UuFJ6TxHnclSeseNhc=
 github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 h1:s6gZFSlWYmbqAuRjVTiNNhvNRfY2Wxp9nhfyel4rklc=

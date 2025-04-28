@@ -3,7 +3,7 @@ module github.com/DBCDK/morph
 go 1.17
 
 require (
-	github.com/DBCDK/kingpin v0.0.0-20180916151106-8554767bc912
+	github.com/DBCDK/kingpin v2.2.6+incompatible
 	github.com/gobwas/glob v0.2.3
 	golang.org/x/crypto v0.31.0
 )
