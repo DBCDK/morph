@@ -1,5 +1,5 @@
 # Completely stripped down version of nixops' evaluator
-{ 
+{
   networkExpr ? null,
   network ? import networkExpr,
 }:
