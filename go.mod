@@ -2,7 +2,7 @@ module github.com/DBCDK/morph
 
 go 1.23.0
 
-toolchain go1.23.8
+toolchain go1.24.3
 
 require (
 	github.com/DBCDK/kingpin v0.0.0-20180916151106-8554767bc912
