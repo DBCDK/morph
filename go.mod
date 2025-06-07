@@ -5,7 +5,7 @@ go 1.23.0
 toolchain go1.23.8
 
 require (
-	github.com/DBCDK/kingpin v0.0.0-20180916151106-8554767bc912
+	github.com/DBCDK/kingpin v0.3.0
 	github.com/gobwas/glob v0.2.3
 	golang.org/x/crypto v0.38.0
 )
