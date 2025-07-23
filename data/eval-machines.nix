@@ -1,8 +1,10 @@
 # Completely stripped down version of nixops' evaluator
-{ networkExpr }:
+{
+  networkExpr ? null,
+  network ? import networkExpr,
+}:
 
 let
-  network = import networkExpr;
   nwPkgs = network.network.pkgs or { };
   lib = network.network.lib or nwPkgs.lib or (import <nixpkgs/lib>);
   evalConfig =
