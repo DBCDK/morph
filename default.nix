@@ -17,7 +17,7 @@ pkgs.buildGoModule rec {
 
   nativeBuildInputs = [ pkgs.installShellFiles ];
 
-  vendorHash = "sha256-sRZWW/ai70hxn/Hn5PomVC9sB3bihTxOzCmdkyrXX8s=";
+  vendorHash = "sha256-raiWUDw7xTT+6bIAe1VnrX9mlwwN1xNoJgQbsM2BWZs=";
 
   postInstall = ''
     mkdir -p $lib
