@@ -1,6 +1,6 @@
-{ nixosTest, packages, ... }:
+{ testers, packages, ... }:
 
-nixosTest {
+testers.nixosTest {
   name = "morph-deployment-test";
   nodes =
     let
