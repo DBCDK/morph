@@ -187,6 +187,34 @@ The default is an empty set, meaning that the nix configuration is inherited fro
 **network.buildShell**
 By passing `--allow-build-shell` and setting `network.buildShell` to a nix-shell compatible derivation (eg. `pkgs.mkShell ...`), it's possible to make morph execute builds from within the defined shell. This makes it possible to have arbitrary dependencies available during the build, say for use with nix build hooks. Be aware that the shell can potentially execute any command on the local system.
 
+**defaults**
+The special `defaults` pseudo-host will be merged into all other hosts, rather than deployed on its own.
+
+For example, this:
+
+```nix
+{
+  defaults = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.curl ];
+  };
+  machine1 = {};
+  machine2 = {};
+}
+```
+
+Is equivalent to this:
+
+```nix
+{
+  machine1 = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.curl ];
+  };
+  machine2 = { pkgs, ... }: {
+    environment.systemPackages = [ pkgs.curl ];
+  };
+}
+```
+
 **special deployment options:**
 
 (per-host granularity)
@@ -195,9 +223,14 @@ By passing `--allow-build-shell` and setting `network.buildShell` to a nix-shell
 
 `substituteOnDestination` Sets the `--substitute-on-destination` flag on nix copy, allowing for the deployment target to use substitutes. See `nix copy --help`. (default: false)
 
+`deployment.targetHost` makes morph connect to the host on a different hostname. (default: the attribute name)
+
+`deployment.targetPort` makes morph connect to the host on a different SSH port. (default: ssh's default, 22 unless overridden)
+
+`deployment.targetUser` makes morph connect to the host as a different SSH user. (default: `SSH_USER` environment variable, ssh configuration, or your local username)
 
 Example usage of `nixConfig` and deployment module options:
-```
+```nix
 network = {
     nixConfig = {
         "extra-sandbox-paths" = "/foo/bar";
@@ -210,13 +243,16 @@ machine1 = { ... }: {
 
 machine2 = { ... }: {
     deployment.substituteOnDestination = true;
+    deployment.targetHost = "10.0.0.5";
+    deployment.targetPort = 2222;
+    deployment.targetUser = "admin";
 };
 ```
 
 **mutually recursive configurations**
 Each host's configuration has access to a `nodes` argument, which contains the compiled configurations of all hosts.
 
-```
+```nix
 machine1 = { nodes, ... }: {
     hostnames.machine2 = 
         (builtins.head nodes.machine2.networking.interfaces.foo.ipv4.addresses).address;
