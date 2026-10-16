@@ -1,7 +1,7 @@
 # morph
 
-[![Flake Checks](https://github.com/DBCDK/morph/actions/workflows/checks.yml/badge.svg?branch=master)](https://github.com/DBCDK/morph/actions/workflows/build.yaml)
-[![Example Configs](https://github.com/DBCDK/morph/actions/workflows/build-test.yaml/badge.svg?branch=master)](https://github.com/DBCDK/morph/actions/workflows/build.yaml)
+[![Flake Checks](https://github.com/DBCDK/morph/actions/workflows/checks.yml/badge.svg?branch=master)](https://github.com/DBCDK/morph/actions/workflows/checks.yml)
+[![Example Configs](https://github.com/DBCDK/morph/actions/workflows/build-test.yaml/badge.svg?branch=master)](https://github.com/DBCDK/morph/actions/workflows/build-test.yaml)
 
 Morph is a tool for managing existing NixOS hosts - basically a fancy wrapper around `nix-build`, `nix copy`, `nix-env`, `/nix/store/.../bin/switch-to-configuration`, `scp` and more.
 Morph supports updating multiple hosts in a row, and with support for health checks makes it fairly safe to do so.
@@ -88,8 +88,8 @@ This makes it easy to use morph for scripting, e.g. if one want to build using m
 Note that `examples/simple.nix` contain two different hosts definitions, and a lot of copy paste.
 All the usual nix tricks can of course be used to avoid duplication.
 
-Hosts can be deployed with the `deploy` command as follows:
-`morph deploy examples/simple.nix` (this will fail without modifying `examples/simple.nix`).
+After adapting `examples/simple.nix` to your hosts, deploy and activate their configurations with:
+`morph deploy examples/simple.nix switch`.
 
 
 ### Selecting/filtering hosts to build and deploy
@@ -247,7 +247,7 @@ All commands mentioned below is available in the nix-shell, if you run `nix-shel
 
 ### Go dependency management
 
-From within `nix-shell`, `go get -u` updates all go modules. Remember to update the `vendorSha256` in `./default.nix`
+From within `nix-shell`, `go get -u` updates all go modules. Remember to update the `vendorHash` in `./default.nix`
 
 ### Building the project with pinned dependencies
 
